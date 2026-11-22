@@ -1,0 +1,39 @@
+
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source "../**/*.blade.php";
+@source "../**/*.js";
+
+@import './base/tokens.css';
+@import './base/global.css';
+@import './base/layout.css';
+@import './base/cards.css';
+@import './base/tables.css';
+@import './base/forms.css';
+@import './base/auth.css';
+@import './base/navigation.css';
+@import './base/dashboard.css';
+@import './base/orders.css';
+@import './base/responsive.css';
+@import './labels/print.css';
+@import './theme/global.css';
+@import './theme/layout.css';
+@import './theme/cards.css';
+@import './theme/tables.css';
+@import './theme/forms.css';
+@import './theme/auth.css';
+@import './theme/navigation.css';
+@import './theme/dashboard.css';
+@import './theme/inventory.css';
+@import './theme/alerts.css';
+@import './theme/responsive.css';
+@import './theme/refinements.css';
+@import './theme/notifications-refinements.css';
+@import './theme/components-refinements.css';
+@import './theme/cards-refinements.css';
+@import './theme/dashboard-refinements.css';
+@import './theme/responsive-refinements.css';
+@import './theme/notifications.css';
+@import './print/prescriptions.css';

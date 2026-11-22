@@ -1,0 +1,167 @@
+
+@media (max-width: 1120px) {
+    .inventory-metrics-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .dashboard-analytics-grid { grid-template-columns: minmax(0,1.35fr) minmax(260px,.9fr); }
+    .dashboard-secondary-charts { grid-template-columns: 1fr; }
+    .patient-filter-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .prescription-detail-row {
+        grid-template-columns: repeat(5,minmax(0,1fr)) 38px;
+        grid-template-areas:
+            "product product dose dose remove"
+            "duration duration frequency frequency ."
+            "quantity quantity quantity sos sos"
+            "instructions instructions instructions instructions .";
+    }
+    .prescription-detail-row.dispensation-prescription-row {
+        grid-template-areas:
+            "prescription-heading prescription-heading prescription-heading prescription-heading prescription-heading prescription-heading"
+            "product product dose dose remove"
+            "duration duration frequency frequency ."
+            "quantity quantity quantity delivery delivery"
+            "sos sos instructions instructions .";
+    }
+    .program-quota-row {
+        grid-template-columns: repeat(2,minmax(0,1fr)) 38px;
+        grid-template-areas:
+            "product product remove"
+            "quantity period-start period-end";
+    }
+    .unidosis-detail-row { grid-template-columns: minmax(0, 2fr) minmax(145px, 1fr) minmax(125px, .9fr) 38px; }
+}
+
+@media (max-width: 760px) {
+    .topbar { padding: 0 12px; }
+    .content-body { padding: 18px 12px; }
+    .dashboard-analytics-grid, .dashboard-secondary-charts { grid-template-columns: minmax(0,1fr); }
+    .quick-actions-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .page-header { align-items: flex-start; }
+    .page-header .header-actions { width: 100%; flex-wrap: wrap; }
+    .page-header .header-actions > .btn { flex: 1 1 145px; }
+    .page-title h1, .page-title h2 { font-size: 20px; }
+    .inventory-toolbar { align-items: stretch; flex-direction: column; gap: 10px; }
+    .inventory-search { width: 100%; max-width: none; }
+    .patient-filter-grid { grid-template-columns: minmax(0,1fr); padding: 14px; }
+    .patient-filter-actions { flex-wrap: wrap; }
+    .chart-card-header { padding-right: 15px; padding-left: 15px; }
+    .chart-card-body { padding-right: 15px; padding-left: 15px; }
+    .chart-summary-row { align-items: flex-start; flex-direction: column; }
+    .chart-period-form { width: 100%; }
+    .form-actions { flex-wrap: wrap; gap: 8px; }
+    .form-actions > .btn { flex: 1 1 145px; }
+    .card-body { padding: 17px; }
+    .card-header { padding: 16px 17px; }
+    .btn { min-height: 42px; }
+    .btn-small { min-height: 38px; }
+    .sidebar-toggle-btn, .icon-btn { min-width: 40px; min-height: 40px; }
+    .prescription-treatment-header { align-items: flex-start; flex-wrap: wrap; }
+    .prescription-treatment-toggle { width: 100%; margin-left: 50px; white-space: normal; }
+    .prescription-verification-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .dispensation-context-header { flex-direction: column; }
+    .dispensation-authorized-person-picker { grid-template-columns: minmax(0,1fr); }
+    .dispensation-authorized-person-picker > .btn { justify-self: start; }
+    .delivery-order-dialog-header { padding: 12px; }
+    .delivery-order-dialog-header h2 { font-size: 13px; }
+    .delivery-order-dialog-body { padding: 12px; }
+    .delivery-order-summary { grid-template-columns: minmax(0,1fr); gap: 9px; }
+    .delivery-order-parties { grid-template-columns: minmax(0,1fr); }
+    .delivery-order-dialog-footer { align-items: stretch; flex-direction: column; }
+    .delivery-order-dialog-actions { flex-direction: column; }
+    .delivery-order-dialog-actions,
+    .delivery-order-dialog-actions form,
+    .delivery-order-dialog-footer .btn { width: 100%; }
+    .detail-row:not(.prescription-detail-row):not(.supply-detail-row) {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+    .detail-row.program-quota-row {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+        grid-template-areas:
+            "product product"
+            "quantity period-start"
+            "period-end remove";
+    }
+    .detail-row.unidosis-detail-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .program-quota-row .detail-remove { justify-self: end; }
+    .prescription-detail-row {
+        grid-template-columns: repeat(2,minmax(0,1fr)) 38px;
+        grid-template-areas:
+            "product product ."
+            "dose dose ."
+            "duration frequency ."
+            "quantity quantity ."
+            "sos sos ."
+            "instructions instructions ."
+            "remove remove remove";
+    }
+    .prescription-detail-row.dispensation-prescription-row {
+        grid-template-areas:
+            "prescription-heading prescription-heading prescription-heading"
+            "product product ."
+            "dose dose ."
+            "duration frequency ."
+            "quantity quantity ."
+            "sos delivery ."
+            "instructions instructions ."
+            "remove remove remove";
+    }
+    .prescription-field-remove { justify-self: end; margin-top: 0; }
+}
+
+@media (max-width: 420px) {
+    .quick-actions-grid { grid-template-columns: minmax(0,1fr); }
+    .quick-actions-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+}
+
+@media (max-width: 480px) {
+    .prescription-verification-grid { grid-template-columns: minmax(0,1fr); }
+    .dispensation-recipe-summary { order: 3; width: 100%; margin-left: 0; }
+    .prescription-detail-row {
+        grid-template-columns: minmax(0,1fr);
+        grid-template-areas:
+            "product"
+            "dose"
+            "duration"
+            "frequency"
+            "quantity"
+            "sos"
+            "instructions"
+            "remove";
+    }
+    .prescription-detail-row.dispensation-prescription-row {
+        grid-template-columns: minmax(0,1fr);
+        grid-template-areas:
+            "prescription-heading"
+            "product"
+            "dose"
+            "duration"
+            "frequency"
+            "quantity"
+            "sos"
+            "delivery"
+            "instructions"
+            "remove";
+    }
+    .detail-row.program-quota-row {
+        grid-template-columns: minmax(0,1fr);
+        grid-template-areas:
+            "product"
+            "quantity"
+            "period-start"
+            "period-end"
+            "remove";
+    }
+    .detail-row.unidosis-detail-row { grid-template-columns: minmax(0,1fr); }
+    .unidosis-detail-row .detail-remove { justify-self: end; margin-top: 0; }
+}
+
+@media (min-width: 761px) and (max-width: 1280px) {
+    .supply-detail-row.shipment-row { grid-template-columns: minmax(210px,1.5fr) repeat(3,minmax(130px,1fr)); }
+    .supply-detail-row.shipment-row .detail-remove { grid-column: 4; grid-row: 2; margin-top: 0; }
+}
+
+@media (max-width: 760px) {
+    .supply-detail-row.request-row { grid-template-columns: minmax(0,1fr) minmax(0,1fr) 36px; }
+    .supply-detail-row.shipment-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .supply-detail-row.shipment-row .form-span { grid-column: 1 / -1; }
+    .supply-detail-row.shipment-row .detail-remove { grid-column: 2; grid-row: 4; justify-self: end; margin-top: 0; }
+}
+

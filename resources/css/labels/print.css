@@ -1,0 +1,111 @@
+.label-page-instructions,
+.label-config-warning,
+.label-preview-warning { max-width: 760px; margin: 18px auto; }
+.dispensed-label-sheet {
+    display: grid;
+    justify-items: start;
+    gap: 14px;
+    max-width: 760px;
+    margin: 24px auto;
+    overflow: auto;
+}
+.dispensed-label {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5mm;
+    width: var(--label-width, min(100%, 480px));
+    height: var(--label-height, auto);
+    min-height: 240px;
+    box-sizing: border-box;
+    padding: var(--label-margin, 8mm);
+    overflow: hidden;
+    border: 1px solid #111;
+    color: #000;
+    background: #fff;
+    font-family: var(--label-font-family, Arial, sans-serif);
+    font-size: var(--label-minimum-font-size, 8pt);
+    line-height: 1.15;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+.dispensed-label-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2mm;
+    padding-bottom: 1mm;
+    border-bottom: .3mm solid #000;
+}
+.dispensed-label-brand { min-width: 0; }
+.dispensed-label-brand strong,
+.dispensed-label-brand small { display: block; overflow-wrap: anywhere; }
+.dispensed-label-brand strong { font-size: calc(var(--label-minimum-font-size, 8pt) + 1pt); }
+.dispensed-label-brand small { margin-top: 1mm; }
+.dispensed-label-lot {
+    max-width: 42%;
+    padding: .7mm;
+    border: .3mm solid #000;
+    font-family: monospace;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+.dispensed-label-patient { display: grid; gap: .5mm; padding: .7mm 0; }
+.dispensed-label-patient > span,
+.dispensed-label-medication > span { font-weight: 700; }
+.dispensed-label-patient strong,
+.dispensed-label-patient small { overflow-wrap: anywhere; }
+.dispensed-label-medication { padding: 1mm; border: .3mm solid #000; }
+.dispensed-label-medication h2 {
+    display: -webkit-box;
+    margin: .7mm 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    color: #000;
+    font-size: calc(var(--label-minimum-font-size, 8pt) + 2pt);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+.dispensed-label-facts { display: grid; grid-template-columns: 1fr 1fr; gap: .7mm 1.5mm; padding-top: .7mm; border-top: .2mm solid #000; }
+.dispensed-label-facts > div { overflow-wrap: anywhere; }
+.dispensed-label-instructions {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+.dispensed-label-footer {
+    display: grid;
+    gap: .7mm;
+    margin-top: auto;
+    padding-top: .7mm;
+    border-top: .3mm solid #000;
+    overflow-wrap: anywhere;
+}
+.dispensed-label-footer strong { font-size: var(--label-minimum-font-size, 8pt); }
+
+@media print {
+    .label-preview-warning { display: none !important; }
+    body.print-delivery-label .dispensed-label-sheet {
+        display: block;
+        width: auto;
+        max-width: none;
+        margin: 0;
+        overflow: visible;
+    }
+    body.print-delivery-label .dispensed-label {
+        width: var(--label-width);
+        height: var(--label-height);
+        min-height: 0;
+        margin: 0;
+        padding: var(--label-margin);
+        border: .3mm solid #000;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    body.print-delivery-label .dispensed-label + .dispensed-label {
+        break-before: page;
+        page-break-before: always;
+    }
+}

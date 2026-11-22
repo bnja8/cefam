@@ -1,0 +1,4 @@
+
+.login-page { background: linear-gradient(135deg,#edf4f8,#f3f6f8 55%,#eef7f7); }
+.login-card { border-color: var(--border); border-radius: var(--radius-card); box-shadow: 0 12px 32px rgba(15,50,70,.08); }
+.login-brand .sidebar-logo-icon { width: 42px; height: 42px; }

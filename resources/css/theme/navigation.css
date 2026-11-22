@@ -1,0 +1,45 @@
+
+.nav-section-title { padding: 16px 12px 7px; color: #63798a; font-size: 10px; font-weight: 700; letter-spacing: .7px; }
+.nav-item { min-height: 44px; padding: 10px 12px; gap: 11px; border: 0; border-left: 3px solid transparent; border-radius: 7px; color: #465f70; font-size: 13px; }
+.nav-item i { width: 18px; color: #587386; font-size: 15px; }
+.nav-item:hover { color: var(--primary-dark); background: var(--sidebar-hover); }
+.nav-item.active { color: var(--primary-dark); background: var(--sidebar-active); border-left-color: var(--primary); box-shadow: none; font-weight: 700; }
+.nav-item.active i { color: #075985; transform: none; }
+.nav-badge { padding: 3px 7px; border-radius: 999px; background: var(--danger); font-size: 10px; }
+.sidebar-module-search { position: sticky; top: 0; z-index: 2; flex: 0 0 auto; padding: 10px 16px 5px; background: var(--surface); }
+.sidebar-module-search-control { height: 42px; display: flex; align-items: center; gap: 9px; padding: 0 12px; border: 1px solid #dce5eb; border-radius: 999px; color: #728694; background: #fbfcfd; }
+.sidebar-module-search-control:focus-within { border-color: #b6cad6; box-shadow: 0 0 0 3px rgba(11,85,120,.08); }
+.sidebar-module-search-control i { flex: 0 0 auto; font-size: 13px; }
+.sidebar-module-search-control input { width: 100%; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; color: #385264; background: transparent; box-shadow: none; font: inherit; font-size: 12px; }
+.sidebar-module-search-control input::placeholder { color: #8394a0; opacity: 1; }
+.sidebar-module-search-control input:focus { border: 0; outline: 0; box-shadow: none; }
+.sidebar-module-search-empty { margin: 8px 3px 2px; color: #718594; font-size: 11px; line-height: 1.4; }
+.sidebar-module-search-empty[hidden],
+.nav-group[hidden],
+.nav-group .nav-item[hidden] { display: none; }
+.nav-group { position: relative; padding-bottom: 5px; }
+.nav-group::before { position: absolute; top: 31px; bottom: 8px; left: 19px; width: 1px; background: #dce5eb; content: ""; }
+.nav-section-title { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 11px 12px 6px; color: #718594; font-size: 10px; line-height: 1.35; letter-spacing: .55px; text-transform: uppercase; }
+.nav-section-title::before { width: 11px; height: 11px; flex: 0 0 11px; margin-top: 1px; border: 2px solid #c9d8e1; border-radius: 50%; background: var(--surface); content: ""; }
+.nav-group .nav-item { width: calc(100% - 28px); min-width: 0; margin: 2px 0 2px 28px; padding: 9px 13px; }
+.nav-group .nav-item i { display: inline-block; flex: 0 0 18px; width: 18px; color: #718594; text-align: center; }
+.nav-group .nav-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-group-active .nav-section-title { color: var(--primary-dark); font-weight: 750; }
+.nav-group-active .nav-section-title::before { border-color: var(--primary); background: var(--primary); }
+.sidebar-nav-container { scrollbar-color: #d6e0e6 transparent; scrollbar-width: thin; }
+.sidebar-nav-container::-webkit-scrollbar { width: 5px; }
+.sidebar-nav-container::-webkit-scrollbar-thumb { border-radius: 99px; background: #d6e0e6; }
+.sidebar-nav-container::-webkit-scrollbar-track { background: transparent; }
+.hub-card { min-height: 108px; padding: 18px; border-color: var(--border); border-radius: 10px; background: #fff; box-shadow: 0 1px 3px rgba(16,45,62,.035); }
+.hub-card:hover { transform: translateY(-2px); border-color: #b9cdd9; box-shadow: 0 8px 18px rgba(16,45,62,.09); }
+.hub-card:focus-visible { transform: translateY(-2px); border-color: #b9cdd9; box-shadow: 0 8px 18px rgba(16,45,62,.09); }
+.hub-card-icon { border: 1px solid #dce7ed; border-radius: 8px; color: var(--primary); background: #edf4f8; }
+.hub-card-copy { text-align: left; }
+.hub-card-copy strong { color: #244357; font-size: 14px; }
+.hub-card-copy small { color: #526b7b; font-size: 12px; }
+.hub-card-arrow { color: #647b8c; }
+.hub-card-blue { background: #fff; }
+.hub-card-green { background: #fff; }
+.hub-card-violet { background: #fff; }
+.hub-card-amber { background: #fff; }
+.hub-card-red { background: #fff; }

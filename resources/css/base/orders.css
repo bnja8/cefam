@@ -1,0 +1,34 @@
+
+.order-number { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.order-patient { margin: 22px 0; }
+.order-patient > div { display: flex; flex-direction: column; gap: 5px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.order-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin: 65px 30px 20px; text-align: center; }
+.order-signatures span { padding-top: 8px; border-top: 1px solid #64748b; }
+.delivery-order-print-sheet { max-width: 1000px; margin: 24px auto; border: 1px solid #dce5ed; border-radius: 14px; overflow: hidden; color: #23384c; background: #fff; }
+.delivery-order-print-header { display: flex; align-items: center; gap: 14px; padding: 18px 22px; color: #fff; background: #0b5578; }
+.delivery-order-print-icon { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; overflow: hidden; border: 1px solid rgba(255,255,255,.25); border-radius: 12px; background: rgba(255,255,255,.12); font-size: 18px; }
+.delivery-order-print-icon img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.delivery-order-print-header h1 { margin: 0; color: inherit; font-size: 19px; }
+.delivery-order-print-header p { margin: 5px 0 0; color: #d7e8f2; font-size: 10px; }
+.delivery-order-print-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 16px 18px 12px; padding: 12px 14px; border: 1px solid #e0e8ef; border-radius: 11px; background: #f8fafc; }
+.delivery-order-print-summary span,
+.delivery-order-print-patient span { display: block; margin-bottom: 5px; color: #8297a9; font-size: 9px; font-weight: 700; }
+.delivery-order-print-summary strong,
+.delivery-order-print-patient strong { color: #24384b; font-size: 11px; }
+.delivery-order-print-patient { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 0 18px 12px; }
+.delivery-order-print-patient > div { padding: 12px 14px; border: 1px solid #e0e8ef; border-radius: 11px; }
+.delivery-order-print-items { width: calc(100% - 36px); margin: 0 18px; border-collapse: collapse; font-size: 10px; }
+.delivery-order-print-items th { padding: 10px 8px; color: #536578; background: #f8fafc; text-align: left; }
+.delivery-order-print-items td { padding: 10px 8px; border-top: 1px solid #e8edf2; vertical-align: top; }
+.delivery-order-print-footer { display: flex; justify-content: space-between; gap: 12px; margin: 14px 18px 16px; padding-top: 10px; border-top: 1px solid #e8edf2; color: #718594; font-size: 9px; }
+.delivery-order-print-footer strong { color: #34495e; }
+@media print {
+    @page delivery-order { size: A4 portrait; margin: 14mm; }
+    body.print-delivery-order { page: delivery-order; }
+    body.print-delivery-order .content-body { max-width: none; margin: 0; padding: 0; }
+    body.print-delivery-order .delivery-order-print-sheet { max-width: none; margin: 0; border-radius: 0; }
+    body.print-delivery-order .delivery-order-print-header { padding: 10mm 8mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body.print-delivery-order .delivery-order-print-items { font-size: 8pt; }
+    body.print-delivery-order .delivery-order-print-items th,
+    body.print-delivery-order .delivery-order-print-items td { padding: 5mm 2mm; }
+}

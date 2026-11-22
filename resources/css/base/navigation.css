@@ -1,0 +1,20 @@
+
+.nav-section-title { display: block; padding: 15px 12px 6px; color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+.nav-item { min-height: 40px; display: flex; align-items: center; gap: 12px; padding: 9px 13px; margin: 2px 0; border-radius: 8px; color: var(--sidebar-text); font-size: 12.5px; font-weight: 500; text-decoration: none; transition: .18s ease; }
+.nav-item i { width: 19px; text-align: center; font-size: 15px; }
+.nav-item:hover { color: #f1f5f9; background: var(--sidebar-hover); }
+.nav-item.active { color: #fff; background: var(--sidebar-active); font-weight: 600; box-shadow: 0 4px 12px rgba(30,64,175,.35); }
+.hub-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.hub-card { min-width: 0; min-height: 106px; display: grid; grid-template-columns: 46px minmax(0, 1fr) 20px; align-items: center; gap: 14px; padding: 17px; border: 1px solid transparent; border-radius: 14px; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.hub-card:hover { transform: translateY(-2px); border-color: rgba(15,23,42,.12); box-shadow: 0 8px 20px rgba(15,23,42,.09); outline: none; }
+.hub-card:focus-visible { transform: translateY(-2px); border-color: rgba(15,23,42,.12); box-shadow: 0 8px 20px rgba(15,23,42,.09); outline: none; }
+.hub-card-icon { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: rgba(255,255,255,.75); font-size: 18px; }
+.hub-card-copy { min-width: 0; text-align: center; }
+.hub-card-copy strong { display: block; font-size: 14px; line-height: 1.4; }
+.hub-card-copy small { display: block; margin-top: 5px; color: #475569; font-size: 11px; line-height: 1.45; }
+.hub-card-arrow { justify-self: end; color: #475569; font-size: 13px; }
+.hub-card-blue { color: #1e40af; background: #eaf2ff; }
+.hub-card-green { color: #166534; background: #eaf8ee; }
+.hub-card-violet { color: #6b21a8; background: #f4edff; }
+.hub-card-amber { color: #92400e; background: #fff5df; }
+.hub-card-red { color: #991b1b; background: #fff0ee; }

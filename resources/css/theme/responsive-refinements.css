@@ -1,0 +1,25 @@
+@media (max-width: 760px) {
+    .sidebar { width: min(300px, 88vw); flex-basis: min(300px, 88vw); }
+    .topbar { min-height: 62px; padding: 0 12px; }
+    .topbar-right { gap: 8px; }
+    .topbar .user-profile { gap: 7px; padding-left: 0; }
+    .topbar .user-info { display: flex; max-width: 31vw; }
+    .topbar .user-name { font-size: 10.5px; }
+    .topbar .user-avatar { width: 32px; height: 32px; flex-basis: 32px; }
+    .topbar .sidebar-toggle-btn,
+    .topbar .icon-btn { width: 36px; height: 36px; min-width: 36px; min-height: 36px; }
+    .content-body {
+        width: calc(100% - 24px);
+        margin: 12px auto;
+        padding: 16px 14px 30px;
+        border-radius: 14px;
+    }
+}
+
+@media (max-width: 420px) {
+    .topbar .user-role { display: none; }
+}
+
+@media print {
+    .topbar { display: none !important; }
+}

@@ -1,0 +1,94 @@
+.person-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+    gap: 16px;
+    padding: 18px;
+}
+.person-card {
+    min-width: 0;
+    min-height: 238px;
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: 0 2px 8px rgba(25,45,65,.045);
+}
+.person-card-heading { min-width: 0; display: flex; align-items: center; gap: 12px; }
+.person-card-avatar {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #a2464c;
+    background: #fce9e9;
+    font-size: 13px;
+    font-weight: 700;
+}
+.person-card-title { min-width: 0; }
+.person-card-title h3 {
+    margin: 0;
+    overflow: hidden;
+    color: #263d4c;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+}
+.person-card-title p {
+    margin: 3px 0 0;
+    overflow: hidden;
+    color: #71808c;
+    font-size: 11.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.person-card-status { margin-top: 16px; }
+.person-card-status .badge { gap: 7px; padding: 5px 9px; font-size: 11px; }
+.person-card-status .badge-success { color: #286347; background: #eaf5ee; }
+.person-card-status .badge-danger { color: #a2464c; background: #fbefef; }
+.person-card-status-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; }
+.person-card-details { display: grid; gap: 10px; margin-top: 12px; color: #596c79; font-size: 12px; }
+.person-card-meta-row { min-width: 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+.person-card-meta-row > i { width: 15px; flex: 0 0 15px; margin-top: 2px; color: #82909b; text-align: center; }
+.person-card-meta-row strong { color: #415665; font-weight: 550; overflow-wrap: anywhere; }
+.person-card-programs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.person-card-programs .badge { white-space: normal; }
+.person-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 16px;
+}
+.person-card-actions > .btn,
+.person-card-actions > form { min-width: 0; flex: 1 1 0; }
+.person-card-actions > .btn { padding-right: 10px; padding-left: 10px; }
+.person-card-actions > form { margin: 0; }
+.person-card-actions > form .btn { width: 100%; }
+.person-card-unavailable { color: #81909b; font-size: 11px; }
+.person-card-authorized-people { display: grid; gap: 7px; margin-top: 2px; padding-top: 10px; border-top: 1px solid var(--border); }
+.person-card-authorized-heading { color: #415665; font-size: 11px; font-weight: 650; }
+.person-card-authorized-person { min-width: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.person-card-authorized-person-copy { min-width: 0; display: grid; gap: 2px; }
+.person-card-authorized-person-copy strong { overflow-wrap: anywhere; color: #415665; font-size: 11px; }
+.person-card-authorized-person-copy small { color: var(--muted); font-size: 10px; }
+.person-card-authorized-people > .text-link { font-size: 11px; }
+.prescription-card-medicines > summary { cursor: pointer; }
+.prescription-card-medicine-list { display: grid; gap: 8px; margin-top: 10px; }
+.prescription-card-medicine {
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #f8fafb;
+    color: #596c79;
+    font-size: 11px;
+    line-height: 1.5;
+}
+.prescription-card-medicine strong { color: #415665; font-size: 12px; }
