@@ -1,10 +1,10 @@
 # Farmacia Asistencial CESFAM
 
-Aplicación Laravel para apoyar el inventario y la dispensación de una farmacia asistencial. Laravel gestiona la lógica, los modelos y las rutas web; las páginas se renderizan con Blade y usan los recursos JavaScript y CSS de `resources`. La migración toma `database/schema/database_1.1.sql` como fuente de verdad del modelo de datos. Los RUT de pacientes, profesionales de salud y usuarios funcionan como claves primarias; sus relaciones usan las columnas `paciente_rut`, `profesional_rut` y `usuario_rut`.
+Aplicación Laravel para apoyar el inventario y la dispensación de una farmacia asistencial. Laravel gestiona la lógica, los modelos y las rutas web; las páginas se renderizan con Blade y usan los recursos JavaScript y CSS de `resources`. Las migraciones Laravel crean y actualizan el esquema directamente, sin depender de archivos `.sql`; `database/schema/nuevo_schema.sql` se conserva como referencia e importación manual opcional. Los RUT de pacientes, profesionales de salud y usuarios funcionan como claves primarias; sus relaciones usan las columnas `paciente_rut`, `profesional_rut` y `usuario_rut`.
 
 Laravel es el único componente que se conecta a MariaDB/MySQL. La interfaz web se sirve desde la misma aplicación; la API JSON versionada se mantiene disponible para integraciones y clientes que la necesiten.
 
-Las modificaciones incrementales del esquema se registran en archivos numerados `database/schema/database_1.x.sql` y en migraciones Laravel. La versión `database_1.10.sql` elimina la columna `dosis` de los detalles de preparación unidosis.
+Los cambios incrementales del esquema se registran en migraciones Laravel. Los archivos SQL de `database/schema` son snapshots de referencia y no son necesarios para instalar o migrar la base de datos.
 
 ## Requisitos
 
@@ -34,7 +34,7 @@ Las modificaciones incrementales del esquema se registran en archivos numerados 
    php artisan serve
    ```
 
-   Para ejecutar las pruebas, se usa SQLite en memoria; la base operativa configurada en `.env.example` es MySQL (`DB_CONNECTION=mysql`). La migración adapta el DDL a SQLite para pruebas y reconoce un esquema completo ya importado desde phpMyAdmin. Las migraciones incrementales agregan el estado del personal y aseguran los roles y ubicaciones iniciales sin duplicarlos. Las sesiones se guardan en archivos (`SESSION_DRIVER=file`), así no dependen de una tabla `sessions` ajena al esquema de farmacia.
+   Para ejecutar las pruebas, se usa SQLite en memoria; la base operativa configurada en `.env.example` es MySQL (`DB_CONNECTION=mysql`). `php artisan migrate --force` crea el esquema desde cero con las migraciones y también reconoce un esquema completo que ya se haya importado. `php artisan migrate --seed` además ejecuta `DatabaseSeeder`, que carga roles, categorías, ubicaciones, el catálogo farmacéutico de referencia y la cuenta administradora inicial. Las sesiones se guardan en archivos (`SESSION_DRIVER=file`), así no dependen de una tabla `sessions` ajena al esquema de farmacia.
 
 4. Inicia Laravel con `php artisan serve` y abre la URL local que indica el comando. Para recargar los recursos CSS y JavaScript durante el desarrollo, ejecuta `npm run dev` en otra terminal; `npm run build` genera los recursos para producción.
 

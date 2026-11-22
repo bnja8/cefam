@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             DB::table('roles')->insertOrIgnore(['nombre' => $name, 'descripcion' => $description]);
         }
 
+        $this->call(PharmaceuticalCatalogSeeder::class);
         $this->call(AdministratorSeeder::class);
 
         foreach ([

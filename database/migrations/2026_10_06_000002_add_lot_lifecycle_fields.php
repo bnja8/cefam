@@ -69,6 +69,34 @@ return new class extends Migration
     // Revierte los cambios de esta migración.
     public function down(): void
     {
-        // These fields are part of the base schema; rolling back must not remove user data.
+        if (! Schema::hasTable('farmacia_migration_ownership')
+            || ! DB::table('farmacia_migration_ownership')
+                ->where('migration', '2026_09_08_000000_prepare_farmacia_schema')
+                ->exists()) {
+            return;
+        }
+
+        if (Schema::hasColumn('lotes', 'estado') && DB::getDriverName() === 'mysql') {
+            $constraint = DB::selectOne(
+                "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
+                WHERE CONSTRAINT_SCHEMA = DATABASE()
+                    AND TABLE_NAME = 'lotes'
+                    AND CONSTRAINT_NAME = 'chk_lotes_estado'
+                    AND CONSTRAINT_TYPE = 'CHECK'"
+            );
+            if ($constraint !== null) {
+                DB::statement('ALTER TABLE `lotes` DROP CHECK `chk_lotes_estado`');
+            }
+        }
+
+        $columns = array_values(array_filter(
+            ['estado', 'fecha_recepcion'],
+            static fn (string $column): bool => Schema::hasColumn('lotes', $column)
+        ));
+        if ($columns !== []) {
+            Schema::table('lotes', function (Blueprint $table) use ($columns): void {
+                $table->dropColumn($columns);
+            });
+        }
     }
 };

@@ -78,12 +78,12 @@ class FarmaciaFlowsTest extends TestCase
     public function test_base_schema_rollback_preserves_an_imported_schema_without_ownership_marker(): void
     {
         $this->assertDatabaseHas('farmacia_migration_ownership', [
-            'migration' => '2026_09_08_000000_create_farmacia_schema',
+            'migration' => '2026_09_08_000000_prepare_farmacia_schema',
         ]);
 
         \Illuminate\Support\Facades\Schema::dropIfExists('farmacia_migration_ownership');
 
-        $migration = require database_path('migrations/2026_09_08_000000_create_farmacia_schema.php');
+        $migration = require database_path('migrations/2026_09_08_000000_prepare_farmacia_schema.php');
         $migration->down();
 
         $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('pacientes'));

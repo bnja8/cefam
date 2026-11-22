@@ -62,13 +62,15 @@ return new class extends Migration
         });
 
         $defaultUnitId = DB::table('unidades_medida')->where('codigo', 'unidad')->value('unidad_medida_id');
-        if (! $defaultUnitId) {
+        if (! $defaultUnitId && DB::table('productos')->exists()) {
             throw new RuntimeException('No existe la unidad base "unidad" en unidades_medida.');
         }
 
-        DB::table('productos')->whereNull('unidad_base_inventario_id')->update([
-            'unidad_base_inventario_id' => $defaultUnitId,
-        ]);
+        if ($defaultUnitId) {
+            DB::table('productos')->whereNull('unidad_base_inventario_id')->update([
+                'unidad_base_inventario_id' => $defaultUnitId,
+            ]);
+        }
         DB::table('productos')
             ->where('es_medicamento', true)
             ->whereNotNull('contenido_envase_unidad_id')

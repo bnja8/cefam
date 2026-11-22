@@ -80,6 +80,12 @@ return new class extends Migration
                 });
             }
         }
+
+        if (! Schema::hasIndex('inventario', 'idx_inventario_lote')) {
+            Schema::table('inventario', function (Blueprint $table) {
+                $table->index('lote_id', 'idx_inventario_lote');
+            });
+        }
     }
 
     private function normalizeMysqlTables(): void

@@ -3,7 +3,7 @@
 
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         if (! Schema::hasColumn('categorias_producto', 'activo')) {
-            DB::statement('ALTER TABLE categorias_producto ADD COLUMN activo BOOLEAN NOT NULL DEFAULT 1');
+            Schema::table('categorias_producto', function (Blueprint $table): void {
+                $table->boolean('activo')->default(true);
+            });
         }
     }
 
@@ -20,7 +22,9 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::hasColumn('categorias_producto', 'activo')) {
-            DB::statement('ALTER TABLE categorias_producto DROP COLUMN activo');
+            Schema::table('categorias_producto', function (Blueprint $table): void {
+                $table->dropColumn('activo');
+            });
         }
     }
 };

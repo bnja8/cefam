@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -28,7 +29,11 @@ return new class extends Migration
         }
 
         Schema::table('tratamientos', function (Blueprint $table) {
-            $table->dropForeign('fk_tratamientos_receta_id');
+            if (DB::getDriverName() === 'sqlite') {
+                $table->dropForeign(['receta_id']);
+            } else {
+                $table->dropForeign('fk_tratamientos_receta_id');
+            }
             $table->dropUnique('tratamientos_receta_id_unique');
             $table->dropColumn('receta_id');
         });
