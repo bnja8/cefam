@@ -11,6 +11,7 @@
                 <div class="form-group"><label for="apellidoPaterno">Apellido paterno *</label><input class="form-control" id="apellidoPaterno" name="apellidoPaterno" value="{{ old('apellidoPaterno', $professional->apellidoPaterno) }}" required maxlength="50"></div>
                 <div class="form-group"><label for="apellidoMaterno">Apellido materno *</label><input class="form-control" id="apellidoMaterno" name="apellidoMaterno" value="{{ old('apellidoMaterno', $professional->apellidoMaterno) }}" required maxlength="50"></div>
                 <div class="form-group"><label for="tipo_profesional">Tipo de profesional *</label><input class="form-control" id="tipo_profesional" name="tipo_profesional" value="{{ old('tipo_profesional', $professional->tipo_profesional) }}" required maxlength="50"></div>
+                <div class="form-group"><label for="especialidad">Especialidad</label><input class="form-control" id="especialidad" name="especialidad" value="{{ old('especialidad', $professional->especialidad) }}" maxlength="100"></div>
                 <label class="check-label"><input type="checkbox" name="activo" value="1" @checked(old('activo', $professional->activo))> Personal activo</label>
                 <div class="form-actions"><button class="btn btn-primary" type="submit">Guardar cambios</button><a class="btn btn-outline" href="{{ route('professionals.index') }}">Cancelar</a></div>
             </form>

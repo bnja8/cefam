@@ -14,7 +14,7 @@
     <main class="login-card">
         <div class="login-brand">
             <span class="sidebar-logo-icon"><img src="{{ asset('logo.jpg') }}" alt=""></span>
-            <div><strong>Farmacia Asistencial</strong><small>Atención Primaria de Salud · APS</small></div>
+            <div><strong>Farmacia Asistencial</strong></div>
         </div>
         <h1>NO SE ENCONTRÓ LA PÁGINA</h1>
         <p class="muted">La dirección que ingresaste no existe o ya no está disponible.</p>

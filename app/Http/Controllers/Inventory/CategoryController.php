@@ -18,7 +18,7 @@ class CategoryController extends Controller
 {
     public function index(Request $request, AuditLogger $audit): View|JsonResponse
     {
-        $this->authorizeCategoryManager($audit);
+        $this->authorizePermission('inventory.catalog.view', $audit, 'categorias_producto');
         $categories = DB::table('categorias_producto')->orderBy('nombre')
             ->paginate(25, ['categoria_id', 'nombre', 'descripcion'], 'categories_page')
             ->withQueryString();
@@ -30,21 +30,21 @@ class CategoryController extends Controller
         return view('inventory.index', [
             'screen' => 'categories',
             'categories' => $categories,
-            'canManageCatalog' => Auth::user()?->hasAnyRole(['Administrador']) ?? false,
-            'canManageCategories' => true,
+            'canManageCatalog' => Auth::user()?->hasPermission('inventory.products.manage') ?? false,
+            'canManageCategories' => Auth::user()?->hasPermission('inventory.catalog.manage') ?? false,
         ]);
     }
 
     public function create(Request $request, AuditLogger $audit): View|JsonResponse
     {
-        $this->authorizeCategoryManager($audit);
+        $this->authorizePermission('inventory.catalog.manage', $audit, 'categorias_producto');
         if ($request->expectsJson()) {
             return response()->json(['data' => ['campos' => ['nombre_categoria', 'descripcion_categoria']]]);
         }
 
         return view('inventory.index', [
             'screen' => 'category-create',
-            'canManageCatalog' => Auth::user()?->hasAnyRole(['Administrador']) ?? false,
+            'canManageCatalog' => Auth::user()?->hasPermission('inventory.products.manage') ?? false,
             'canManageCategories' => true,
         ]);
     }
@@ -74,7 +74,7 @@ class CategoryController extends Controller
 
     public function edit(Request $request, int $categoryId, AuditLogger $audit): View|JsonResponse
     {
-        $this->authorizeCategoryManager($audit, $categoryId);
+        $this->authorizePermission('inventory.catalog.manage', $audit, 'categorias_producto', $categoryId);
         $category = DB::table('categorias_producto')->where('categoria_id', $categoryId)->first();
         abort_unless($category, 404);
 
@@ -110,18 +110,4 @@ class CategoryController extends Controller
         return redirect()->route('categories.index')->with('status', 'Categoría actualizada correctamente.');
     }
 
-    // Autoriza la consulta y creación de categorías a los roles gestores.
-    private function authorizeCategoryManager(AuditLogger $audit, int|string|null $categoryId = null): void
-    {
-        $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
-            $audit->record(
-                'ACCESO_DENEGADO',
-                'categorias_producto',
-                is_numeric($categoryId) ? (int) $categoryId : null,
-                'RECHAZADO'
-            );
-            abort(403);
-        }
-    }
 }

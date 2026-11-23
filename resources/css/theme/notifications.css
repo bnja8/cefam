@@ -42,8 +42,8 @@
     padding: 18px 18px 14px;
     border-bottom: 1px solid var(--border);
 }
-.notification-panel-header h2 { margin: 0; color: #263f50; font-size: 16px; font-weight: 700; }
-.notification-panel-header p { margin: 4px 0 0; color: #7a8a95; font-size: 11px; }
+.notification-panel-header h2 { margin: 0; color: var(--text); font-size: 16px; font-weight: 700; }
+.notification-panel-header p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
 .notification-panel-header form { flex: 0 0 auto; margin: 1px 0 0; }
 .notification-read-all {
     padding: 4px 0;
@@ -63,7 +63,7 @@
     gap: 6px;
     padding: 12px 0 10px;
     border: 0;
-    color: #7a8992;
+    color: var(--muted);
     background: transparent;
     cursor: pointer;
     font-size: 11px;
@@ -73,7 +73,7 @@
     min-width: 18px;
     padding: 2px 5px;
     border-radius: 999px;
-    color: #667984;
+    color: var(--muted);
     background: #edf2f5;
     font-size: 9px;
     text-align: center;
@@ -115,13 +115,13 @@
 }
 .notification-item-copy { min-width: 0; flex: 1; display: block; }
 .notification-item-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 9px; }
-.notification-item-heading strong { color: #2f4655; font-size: 11px; font-weight: 700; }
-.notification-item-heading time { flex: 0 0 auto; color: #87949c; font-size: 9px; }
-.notification-item-message { display: block; margin-top: 5px; color: #62727c; font-size: 10px; line-height: 1.55; overflow-wrap: anywhere; }
+.notification-item-heading strong { color: var(--text); font-size: 11px; font-weight: 700; }
+.notification-item-heading time { flex: 0 0 auto; color: var(--muted); font-size: 9px; }
+.notification-item-message { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.55; overflow-wrap: anywhere; }
 .notification-item-action { display: inline-block; margin-top: 7px; color: var(--primary); font-size: 10px; font-weight: 650; }
 .notification-item-action i { margin-left: 3px; font-size: 8px; }
 .notification-unread-dot { width: 7px; height: 7px; flex: 0 0 7px; margin-top: 5px; border-radius: 50%; background: #d83a42; }
-.notification-empty { margin: 0; padding: 28px 18px; color: #778792; font-size: 11px; text-align: center; }
+.notification-empty { margin: 0; padding: 28px 18px; color: var(--muted); font-size: 11px; text-align: center; }
 
 @media (max-width: 600px) {
     .notification-panel { position: fixed; top: 68px; right: 12px; width: min(420px, calc(100vw - 24px)); }

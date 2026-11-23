@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(/* Callback que completa un paso de la operación actual. */ function (Middleware $middleware) {
         $middleware->redirectGuestsTo('/login');
+        $middleware->web(append: [\App\Http\Middleware\AuthorizeRoutePermission::class]);
         $middleware->trustProxies(
             headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR,
         );

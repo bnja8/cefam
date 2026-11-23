@@ -1,7 +1,7 @@
 
 .data-table { font-size: 13px; }
-.data-table th { padding: 14px 16px; border-bottom-color: var(--border-strong); background: #eef4f7; color: #415e71; font-size: 11px; letter-spacing: .3px; }
-.data-table td { padding: 14px 16px; border-bottom-color: #e5edf1; color: #304b5e; line-height: 1.45; }
+.data-table th { padding: 14px 16px; border-bottom-color: var(--border-strong); background: #eef4f7; color: #536578; font-size: 11px; letter-spacing: .3px; }
+.data-table td { padding: 14px 16px; border-bottom-color: #e5edf1; color: #536578; line-height: 1.45; }
 .data-table tbody tr:hover { background: #f4f8fa; }
 .table-responsive { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-color: #a9bfcc #edf3f7; scrollbar-width: thin; }
 .table-responsive:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: -3px; }

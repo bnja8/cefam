@@ -15,7 +15,7 @@
                 @forelse ($deliveries as $delivery)
                     <x-person-card
                         :name="$delivery->paciente"
-                        :subtitle="'Entrega · '.\Illuminate\Support\Carbon::parse($delivery->fecha_hora)->format('d/m/Y H:i')"
+                        :subtitle="($delivery->es_sos ? 'Tratamiento SOS · ' : 'Entrega · ').\Illuminate\Support\Carbon::parse($delivery->fecha_hora)->format('d/m/Y H:i')"
                         :status="$delivery->estado"
                         :active="$delivery->estado === 'CONFIRMADA'"
                         :status-class="$delivery->estado === 'CONFIRMADA' ? 'badge-success' : ($delivery->estado === 'PENDIENTE' ? 'badge-warning' : 'badge-danger')"

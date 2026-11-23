@@ -36,4 +36,6 @@
 @import './theme/dashboard-refinements.css';
 @import './theme/responsive-refinements.css';
 @import './theme/notifications.css';
+@import './theme/permissions.css';
 @import './print/prescriptions.css';
+@import './theme/modern-polish.css';

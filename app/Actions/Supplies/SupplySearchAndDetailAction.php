@@ -12,11 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class SupplySearchAndDetailAction
 {
-    private const SUPPLY_OPERATORS = ['Administrador', 'Químico Farmacéutico', 'Técnico Farmacéutico'];
-
     public function searchRequestProducts(Request $request, AuditLogger $audit): JsonResponse
     {
-        $this->authorizeSupplyOperation($audit, 'solicitudes_reposicion');
+        $this->authorizeSupplyOperation($audit, 'supplies.view', 'solicitudes_reposicion');
         $data = $request->validate([
             'q' => ['required', 'string', 'max:100'],
         ]);
@@ -132,10 +130,10 @@ class SupplySearchAndDetailAction
         return response()->json(['data' => ['solicitud' => $supplyRequest, 'detalles' => $details]]);
     }
 
-    private function authorizeSupplyOperation(AuditLogger $audit, string $entity): void
+    private function authorizeSupplyOperation(AuditLogger $audit, string $permission, string $entity): void
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(self::SUPPLY_OPERATORS)) {
+        if (! $user instanceof Usuario || ! $user->hasPermission($permission)) {
             $audit->record('ACCESO_DENEGADO', $entity, null, 'RECHAZADO');
             abort(403);
         }

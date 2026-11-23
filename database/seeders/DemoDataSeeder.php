@@ -130,7 +130,7 @@ class DemoDataSeeder extends Seeder
             }
         }
 
-        $professionalId = DB::table('profesionales_salud')->where('rut', '123456785')->value('rut');
+        $professionalId = DB::table('personal_salud')->where('rut', '123456785')->value('rut');
         if ($professionalId) {
             foreach ([
                 ['DEMO-REC-001', 'elena', 'DEMO-MED-001', 'VIGENTE', 90],

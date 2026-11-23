@@ -23,6 +23,7 @@ export const createDispensationPrescriptionRows = ({
         const heading = row.querySelector('[data-dispensation-prescription-heading]');
         const productName = row.querySelector('[data-dispensation-product-name]');
         const deliveryQuantity = row.querySelector('[data-delivery-quantity]');
+        const isSosMode = dispensationList?.dataset.treatmentSos === 'true';
         const productId = productSelect?.value || '';
         if (heading) heading.hidden = !productId;
         if (productName) productName.textContent = productSelect?.selectedOptions[0]?.textContent.trim() || '';
@@ -40,12 +41,6 @@ export const createDispensationPrescriptionRows = ({
             const field = row.querySelector(selector);
             if (field && 'readOnly' in field) field.readOnly = isPrescriptionSourceLocked;
         });
-        const sos = row.querySelector('[data-sos-treatment]');
-        const prescribedSosValue = row.querySelector('[data-prescribed-sos-value]');
-        if (sos) sos.disabled = isPrescriptionSourceLocked;
-        if (prescribedSosValue && detail) {
-            prescribedSosValue.value = Boolean(Number(detail.es_sos)) ? '1' : '0';
-        }
         const clearFieldError = (selector) => row.querySelector(selector)?.setCustomValidity('');
         const clearTranscriptionErrors = () => {
             [
@@ -54,7 +49,6 @@ export const createDispensationPrescriptionRows = ({
                 '[data-prescription-frequency]',
                 '[data-prescribed-quantity]',
                 '[data-delivery-quantity]',
-                '[data-sos-treatment]',
                 '[name$="[indicaciones]"]',
             ].forEach(clearFieldError);
         };
@@ -66,6 +60,14 @@ export const createDispensationPrescriptionRows = ({
                 deliveryQuantity.dataset.prescriptionProduct = '';
             }
             clearTranscriptionErrors();
+            if (isSosMode) {
+                const deliveryHelp = row.querySelector('[data-delivery-quantity-help]');
+                if (deliveryQuantity) {
+                    deliveryQuantity.removeAttribute('max');
+                }
+                if (deliveryHelp) deliveryHelp.textContent = 'Ingresa la cantidad que se entregará al paciente.';
+                return true;
+            }
 
             return false;
         }
@@ -130,9 +132,7 @@ export const createDispensationPrescriptionRows = ({
         const compareText = (selector, expected, label) => {
             const field = row.querySelector(selector);
             if (!field || expected === null || expected === undefined) return;
-            const actual = selector === '[data-prescription-frequency]' && row.querySelector('[data-sos-treatment]')?.checked
-                ? 'SOS'
-                : field.value.trim();
+            const actual = field.value.trim();
             if (actual === '') {
                 field.setCustomValidity(`${label} debe coincidir con la receta vigente.`);
                 isIncomplete = true;
@@ -143,9 +143,6 @@ export const createDispensationPrescriptionRows = ({
             field.setCustomValidity(isMatch ? '' : `${label} debe coincidir con la receta vigente.`);
             hasMismatch = hasMismatch || ! isMatch;
         };
-        const sosMatches = Boolean(sos?.checked) === Boolean(Number(detail.es_sos));
-        sos?.setCustomValidity(sosMatches ? '' : 'La indicación SOS debe coincidir con la receta vigente.');
-        hasMismatch = hasMismatch || ! sosMatches;
         compareNumber('[data-dose-amount]', detail.unidades_por_toma, 'La dosis por toma');
         compareNumber('[data-treatment-duration]', detail.duracion_dias, 'La duración');
         compareNumber('[data-prescribed-quantity]', detail.cantidad_indicada, 'La cantidad prescrita', true);
@@ -185,27 +182,27 @@ export const createDispensationPrescriptionRows = ({
             row.querySelector('[data-treatment-duration]').value = detail.duracion_dias ?? '';
             row.querySelector('[data-prescription-frequency]').value = detail.frecuencia ?? '';
             row.querySelector('[data-prescribed-quantity]').value = detail.cantidad_indicada ?? '';
-            row.querySelector('[data-prescribed-sos-value]').value = Boolean(Number(detail.es_sos)) ? '1' : '0';
-            row.querySelector('[data-sos-treatment]').checked = Boolean(Number(detail.es_sos));
             row.querySelector('[name$="[indicaciones]"]').value = detail.indicaciones ?? '';
             if (!preserveEnteredValues) row.querySelector('[data-delivery-quantity]').value = '';
         }
         productSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        row.querySelector('[data-sos-treatment]').dispatchEvent(new Event('change', { bubbles: true }));
     };
     const renderPrescriptionDetails = () => {
         const recipe = recipeSelect?.selectedOptions[0];
         if (!dispensationList || !dispensationTemplate || !dispensationAddButton) return;
 
         if (!recipe?.value) {
-            dispensationAddButton.hidden = true;
+            const isSosMode = dispensationList.dataset.treatmentSos === 'true';
+            dispensationAddButton.hidden = !isSosMode;
             dispensationList.dataset.renderedRecipeId = '';
             const rows = [...dispensationList.querySelectorAll('[data-dispensation-row]')];
             rows.forEach(updateDispensationTranscription);
             if (dispensationEmpty) {
-                dispensationEmpty.textContent = patientSelect?.value
-                    ? 'Selecciona una receta vigente para cargar los medicamentos prescritos.'
-                    : 'Selecciona un paciente para cargar sus recetas vigentes.';
+                dispensationEmpty.textContent = isSosMode
+                    ? 'Agrega el medicamento y la cantidad para este tratamiento SOS.'
+                    : patientSelect?.value
+                        ? 'Selecciona una receta vigente para cargar los medicamentos prescritos.'
+                        : 'Selecciona un paciente para cargar sus recetas vigentes.';
                 dispensationEmpty.hidden = rows.length > 0;
             }
             refreshDistinctProductOptions(dispensationList);

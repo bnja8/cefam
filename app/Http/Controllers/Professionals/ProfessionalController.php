@@ -48,15 +48,14 @@ class ProfessionalController extends Controller
     {
         $user = Auth::user();
         abort_unless(
-            $user instanceof Usuario
-                && $user->hasAnyRole(['Administrador', 'Químico Farmacéutico', 'Técnico Farmacéutico']),
+            $user instanceof Usuario && $user->hasPermission('personal.view'),
             403
         );
         /** @var Usuario $user */
 
         $screen = $request->boolean('mostrar_formulario') ? 'create' : $request->route('screen', 'list');
         if ($screen === 'create') {
-            abort_unless($user->hasAnyRole(['Administrador', 'Químico Farmacéutico']), 403);
+            abort_unless($user->hasPermission('personal.create'), 403);
 
             if ($request->expectsJson()) {
                 return response()->json(['data' => [], 'options' => ['professionalTypes' => self::PROFESSIONAL_TYPES]]);
@@ -71,7 +70,7 @@ class ProfessionalController extends Controller
             ]);
         }
 
-        $types = DB::table('profesionales_salud')
+        $types = DB::table('personal_salud')
             ->select('tipo_profesional')
             ->distinct()
             ->orderBy('tipo_profesional')
@@ -82,18 +81,18 @@ class ProfessionalController extends Controller
             'estado' => ['nullable', Rule::in(['activo', 'inactivo'])],
         ]);
 
-        $professionals = DB::table('profesionales_salud')
-            ->select('profesionales_salud.*', PersonName::expression('profesionales_salud', 'nombre_completo'))
-            ->when(($filters['estado'] ?? null) === 'activo',  fn ($query) => $query->where('profesionales_salud.activo', true))
-            ->when(($filters['estado'] ?? null) === 'inactivo',  fn ($query) => $query->where('profesionales_salud.activo', false))
+        $professionals = DB::table('personal_salud')
+            ->select('personal_salud.*', PersonName::expression('personal_salud', 'nombre_completo'))
+            ->when(($filters['estado'] ?? null) === 'activo',  fn ($query) => $query->where('personal_salud.activo', true))
+            ->when(($filters['estado'] ?? null) === 'inactivo',  fn ($query) => $query->where('personal_salud.activo', false))
             ->when($filters['tipo_profesional'] ?? null,  fn ($query, string $type) => $query->where('tipo_profesional', $type))
             ->when($filters['buscar'] ?? null,  function ($query, string $search) {
                 $term = '%'.$search.'%';
                 $rutTerm = '%'.Rut::limpiarRut($search).'%';
                 $query->where( function ($query) use ($search, $term, $rutTerm) {
-                    $query->where('profesionales_salud.rut', 'like', $rutTerm)
-                        ->orWhere('profesionales_salud.tipo_profesional', 'like', $term)
-                        ->orWhere( fn ($nameQuery) => PersonName::whereMatches($nameQuery, 'profesionales_salud', $search));
+                    $query->where('personal_salud.rut', 'like', $rutTerm)
+                        ->orWhere('personal_salud.tipo_profesional', 'like', $term)
+                        ->orWhere( fn ($nameQuery) => PersonName::whereMatches($nameQuery, 'personal_salud', $search));
                 });
             })
             ->orderBy('apellidoPaterno')
@@ -119,8 +118,8 @@ class ProfessionalController extends Controller
             'screen' => 'list',
             'professionals' => $professionals,
             'types' => $types,
-            'canRegister' => $user->hasAnyRole(['Administrador', 'Químico Farmacéutico']),
-            'canManage' => $user->hasAnyRole(['Administrador', 'Químico Farmacéutico']),
+            'canRegister' => $user->hasPermission('personal.create'),
+            'canManage' => $user->hasPermission('personal.edit'),
         ]);
     }
 
@@ -128,8 +127,8 @@ class ProfessionalController extends Controller
     public function store(Request $request, AuditLogger $audit): RedirectResponse|JsonResponse
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
-            $audit->record('ACCESO_DENEGADO', 'profesionales_salud', null, 'RECHAZADO');
+        if (! $user instanceof Usuario || ! $user->hasPermission('personal.create')) {
+            $audit->record('ACCESO_DENEGADO', 'personal_salud', null, 'RECHAZADO');
             abort(403);
         }
 
@@ -141,16 +140,17 @@ class ProfessionalController extends Controller
                 'max:9',
                 'regex:/^\d{7,8}[0-9K]$/',
                 fn ($attribute, $value, $fail) => Rut::validarRut($value) ?: $fail('El RUT ingresado no es válido.'),
-                Rule::unique('profesionales_salud', 'rut'),
+                Rule::unique('personal_salud', 'rut'),
             ],
             'nombre' => ['required', 'string', 'max:50'],
             'apellidoPaterno' => ['required', 'string', 'max:50'],
             'apellidoMaterno' => ['required', 'string', 'max:50'],
             'tipo_profesional' => ['required', 'string', 'max:50'],
+            'especialidad' => ['nullable', 'string', 'max:100'],
         ]);
 
-        DB::table('profesionales_salud')->insert($data);
-        $audit->record('CREACION', 'profesionales_salud', null, 'EXITOSO', ['rut' => $data['rut']]);
+        DB::table('personal_salud')->insert($data);
+        $audit->record('CREACION', 'personal_salud', null, 'EXITOSO', ['rut' => $data['rut']]);
 
         if ($request->expectsJson()) {
             return response()->json(['message' => 'Personal de salud registrado correctamente.', 'data' => $data], 201);
@@ -161,8 +161,8 @@ class ProfessionalController extends Controller
 
     public function edit(string $professionalRut, AuditLogger $audit, Request $request): View|JsonResponse
     {
-        $this->authorizeManagement($audit, $professionalRut);
-        $professional = DB::table('profesionales_salud')->where('rut', $professionalRut)->first();
+        $this->authorizeManagement($audit, $professionalRut, 'personal.edit');
+        $professional = DB::table('personal_salud')->where('rut', $professionalRut)->first();
         abort_unless($professional, 404);
 
         if ($request->expectsJson()) {
@@ -178,8 +178,8 @@ class ProfessionalController extends Controller
     // Valida y actualiza el registro existente.
     public function update(Request $request, string $professionalRut, AuditLogger $audit): RedirectResponse|JsonResponse
     {
-        $this->authorizeManagement($audit, $professionalRut);
-        $professional = DB::table('profesionales_salud')->where('rut', $professionalRut)->first();
+        $this->authorizeManagement($audit, $professionalRut, 'personal.edit');
+        $professional = DB::table('personal_salud')->where('rut', $professionalRut)->first();
         abort_unless($professional, 404);
 
         $data = $request->validate([
@@ -187,11 +187,12 @@ class ProfessionalController extends Controller
             'apellidoPaterno' => ['required', 'string', 'max:50'],
             'apellidoMaterno' => ['required', 'string', 'max:50'],
             'tipo_profesional' => ['required', 'string', 'max:50'],
+            'especialidad' => ['nullable', 'string', 'max:100'],
             'activo' => ['nullable', 'boolean'],
         ]);
         $data['activo'] = $request->boolean('activo');
-        DB::table('profesionales_salud')->where('rut', $professionalRut)->update($data);
-        $audit->record('ACTUALIZACION', 'profesionales_salud', null, 'EXITOSO', [
+        DB::table('personal_salud')->where('rut', $professionalRut)->update($data);
+        $audit->record('ACTUALIZACION', 'personal_salud', null, 'EXITOSO', [
             'rut' => $professionalRut,
             'activo' => $data['activo'],
         ]);
@@ -205,13 +206,13 @@ class ProfessionalController extends Controller
 
     public function toggle(string $professionalRut, AuditLogger $audit, Request $request): RedirectResponse|JsonResponse
     {
-        $this->authorizeManagement($audit, $professionalRut);
-        $professional = DB::table('profesionales_salud')->where('rut', $professionalRut)->first();
+        $this->authorizeManagement($audit, $professionalRut, 'personal.edit');
+        $professional = DB::table('personal_salud')->where('rut', $professionalRut)->first();
         abort_unless($professional, 404);
 
         $active = ! $professional->activo;
-        DB::table('profesionales_salud')->where('rut', $professionalRut)->update(['activo' => $active]);
-        $audit->record('CAMBIO_ESTADO', 'profesionales_salud', null, 'EXITOSO', [
+        DB::table('personal_salud')->where('rut', $professionalRut)->update(['activo' => $active]);
+        $audit->record('CAMBIO_ESTADO', 'personal_salud', null, 'EXITOSO', [
             'rut' => $professionalRut,
             'activo' => $active,
         ]);
@@ -223,11 +224,11 @@ class ProfessionalController extends Controller
         return redirect()->route('professionals.index')->with('status', 'Estado del personal actualizado.');
     }
 
-    private function authorizeManagement(AuditLogger $audit, string $professionalRut): void
+    private function authorizeManagement(AuditLogger $audit, string $professionalRut, string $permission): void
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
-            $audit->record('ACCESO_DENEGADO', 'profesionales_salud', null, 'RECHAZADO', ['rut' => $professionalRut]);
+        if (! $user instanceof Usuario || ! $user->hasPermission($permission)) {
+            $audit->record('ACCESO_DENEGADO', 'personal_salud', null, 'RECHAZADO', ['rut' => $professionalRut]);
             abort(403);
         }
     }

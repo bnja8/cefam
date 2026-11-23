@@ -8,6 +8,7 @@ use App\Services\Patients\PatientFileService;
 use App\Support\People\Rut;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -21,11 +22,17 @@ class DatabaseSeeder extends Seeder
             ['Técnico Farmacéutico', 'Operación de farmacia e inventario'],
             ['Químico Farmacéutico', 'Supervisión y validación farmacéutica'],
         ] as [$name, $description]) {
-            DB::table('roles')->insertOrIgnore(['nombre' => $name, 'descripcion' => $description]);
+            DB::table('roles')->insertOrIgnore([
+                'nombre' => $name,
+                'descripcion' => $description,
+                'slug' => Str::slug($name),
+                'permissions_initialized' => false,
+            ]);
         }
 
         $this->call(PharmaceuticalCatalogSeeder::class);
         $this->call(AdministratorSeeder::class);
+        $this->call(PermissionSeeder::class);
 
         foreach ([
             'Medicamentos',
@@ -59,7 +66,7 @@ class DatabaseSeeder extends Seeder
             DB::table('programas_salud')->insertOrIgnore(['nombre' => $program, 'descripcion' => $program, 'activo' => true]);
         }
 
-        DB::table('profesionales_salud')->insertOrIgnore([
+        DB::table('personal_salud')->insertOrIgnore([
             'rut' => Rut::limpiarRut('12.345.678-5'),
             'nombre' => 'Camila',
             'apellidoPaterno' => 'Fuentes',

@@ -16,6 +16,7 @@
                         <div class="form-group"><label for="user-maternal-surname">Apellido materno *</label><input class="form-control" id="user-maternal-surname" name="apellidoMaterno" value="{{ old('apellidoMaterno') }}" required maxlength="50"></div>
                         <x-phone-input id="user-phone" />
                         <div class="form-group"><label for="user-role">Rol *</label><select class="form-control" id="user-role" name="rol_id" required>@foreach ($roles as $role)<option value="{{ $role->rol_id }}" @selected(old('rol_id') == $role->rol_id)>{{ $role->nombre }}</option>@endforeach</select></div>
+                        <div class="form-group"><label for="user-personal">Personal de salud vinculado (opcional)</label><select class="form-control" id="user-personal" name="personal_rut"><option value="">Sin vínculo</option>@foreach ($personal as $member)<option value="{{ $member->rut }}" @selected(old('personal_rut') === $member->rut)>{{ $member->nombre_completo }} - {{ $member->rut }}</option>@endforeach</select></div>
                         <div class="form-group form-span"><label for="user-password">Contraseña temporal * (mínimo 12 caracteres)</label><input class="form-control" id="user-password" type="password" name="password" minlength="12" required autocomplete="new-password"></div>
                         <div class="form-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-user-plus"></i> Crear cuenta</button></div>
                     </form>
@@ -48,7 +49,7 @@
                     @foreach ($rows as $row)
                         <x-person-card
                             :name="$row->nombre_completo"
-                            :subtitle="$row->rol ?? 'Sin rol asignado'"
+                            :subtitle="$row->rol ? $row->rol.(! $row->rol_activo ? ' (rol desactivado)' : '') : 'Sin rol asignado'"
                             :status="$row->activo ? 'Activo' : 'Desactivado'"
                             :active="$row->activo"
                         >
@@ -60,6 +61,10 @@
                                 <div class="person-card-meta-row">
                                     <i class="fa-solid fa-phone" aria-hidden="true"></i>
                                     <span>Teléfono <strong>{{ $row->telefono ?: '—' }}</strong></span>
+                                </div>
+                                <div class="person-card-meta-row">
+                                    <i class="fa-solid fa-user-doctor" aria-hidden="true"></i>
+                                    <span>Personal de salud <strong>{{ $row->personal_nombre ?: 'No vinculado' }}</strong></span>
                                 </div>
                             </x-slot:details>
                             @if (auth()->user()->hasAnyRole(['Administrador']))

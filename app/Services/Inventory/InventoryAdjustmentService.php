@@ -18,38 +18,70 @@ class InventoryAdjustmentService
 
     public function requestAdjustment(array $data, string $requesterRut): int
     {
-        $quantity = $this->positiveQuantity($data['cantidad'] ?? null);
-        if (! in_array($data['tipo_ajuste'] ?? null, ['ENTRADA', 'SALIDA'], true)) {
+        return $this->requestAdjustments([$data], $requesterRut)['solicitud_ajuste_ids'][0];
+    }
+
+    public function requestAdjustments(array $details, string $requesterRut): array
+    {
+        if ($details === []) {
             throw ValidationException::withMessages([
-                'tipo_ajuste' => 'El tipo de ajuste no es válido.',
+                'detalles' => 'Agrega al menos un producto a la solicitud.',
             ]);
         }
 
-        return DB::transaction(function () use ($data, $quantity, $requesterRut): int {
+        $details = array_map(function (array $detail): array {
+            $detail['cantidad'] = $this->positiveQuantity($detail['cantidad'] ?? null);
+            if (! in_array($detail['tipo_ajuste'] ?? null, ['ENTRADA', 'SALIDA'], true)) {
+                throw ValidationException::withMessages([
+                    'tipo_ajuste' => 'El tipo de ajuste no es válido.',
+                ]);
+            }
+
+            return $detail;
+        }, array_values($details));
+
+        return DB::transaction(function () use ($details, $requesterRut): array {
             $requesterIsPharmacist = DB::table('usuario_rol')
                 ->join('roles', 'roles.rol_id', '=', 'usuario_rol.rol_id')
                 ->where('usuario_rol.usuario_rut', $requesterRut)
+                ->where('roles.activo', true)
                 ->where('roles.nombre', 'Químico Farmacéutico')
                 ->exists();
-            $requestId = DB::table('solicitudes_ajuste_inventario')->insertGetId([
-                'lote_id' => $data['lote_id'],
-                'ubicacion_id' => $data['ubicacion_id'],
-                'tipo_ajuste' => $data['tipo_ajuste'],
-                'cantidad' => $quantity,
-                'motivo' => trim($data['motivo']),
+            $groupId = DB::table('solicitudes_ajuste_grupos')->insertGetId([
                 'estado' => 'PENDIENTE',
                 'usuario_solicita_rut' => $requesterRut,
                 'solicitante_es_qf' => $requesterIsPharmacist,
             ]);
-            $this->audit->record('SOLICITUD_AJUSTE_INVENTARIO', 'solicitudes_ajuste_inventario', $requestId, 'PENDIENTE', [
-                'lote_id' => $data['lote_id'],
-                'ubicacion_id' => $data['ubicacion_id'],
-                'tipo_ajuste' => $data['tipo_ajuste'],
-                'cantidad' => $quantity,
-                'motivo' => trim($data['motivo']),
-            ]);
+            $requestIds = [];
 
-            return $requestId;
+            foreach ($details as $detail) {
+                $requestId = DB::table('solicitudes_ajuste_inventario')->insertGetId([
+                    'grupo_ajuste_id' => $groupId,
+                    'lote_id' => $detail['lote_id'],
+                    'ubicacion_id' => $detail['ubicacion_id'],
+                    'tipo_ajuste' => $detail['tipo_ajuste'],
+                    'cantidad' => $detail['cantidad'],
+                    'motivo' => trim($detail['motivo']),
+                    'estado' => 'PENDIENTE',
+                    'usuario_solicita_rut' => $requesterRut,
+                    'solicitante_es_qf' => $requesterIsPharmacist,
+                ]);
+                $requestIds[] = $requestId;
+
+                $this->audit->record('SOLICITUD_AJUSTE_INVENTARIO', 'solicitudes_ajuste_inventario', $requestId, 'PENDIENTE', [
+                    'grupo_ajuste_id' => $groupId,
+                    'lote_id' => $detail['lote_id'],
+                    'ubicacion_id' => $detail['ubicacion_id'],
+                    'tipo_ajuste' => $detail['tipo_ajuste'],
+                    'cantidad' => $detail['cantidad'],
+                    'motivo' => trim($detail['motivo']),
+                ]);
+            }
+
+            return [
+                'grupo_ajuste_id' => $groupId,
+                'solicitud_ajuste_ids' => $requestIds,
+            ];
         });
     }
 
@@ -67,59 +99,90 @@ class InventoryAdjustmentService
         }
 
         DB::transaction(function () use ($requestId, $approverRut, $decision, $resolutionReason): void {
-            $adjustmentRequest = DB::table('solicitudes_ajuste_inventario')
+            $requestDetail = DB::table('solicitudes_ajuste_inventario')
                 ->where('solicitud_ajuste_id', $requestId)
                 ->lockForUpdate()
                 ->first();
-            if (! $adjustmentRequest) {
+            if (! $requestDetail) {
                 throw new ModelNotFoundException('No se encontró la solicitud de ajuste.');
             }
-            if ($adjustmentRequest->estado !== 'PENDIENTE') {
+            $adjustmentGroup = DB::table('solicitudes_ajuste_grupos')
+                ->where('grupo_ajuste_id', $requestDetail->grupo_ajuste_id)
+                ->lockForUpdate()
+                ->first();
+            if (! $adjustmentGroup) {
+                throw new ModelNotFoundException('No se encontró el grupo de solicitudes de ajuste.');
+            }
+            if ($adjustmentGroup->estado !== 'PENDIENTE') {
                 throw ValidationException::withMessages([
                     'decision' => 'Esta solicitud ya fue resuelta y no puede modificarse.',
                 ]);
             }
 
-            if ($adjustmentRequest->solicitante_es_qf && $adjustmentRequest->usuario_solicita_rut === $approverRut) {
+            if ($adjustmentGroup->solicitante_es_qf && $adjustmentGroup->usuario_solicita_rut === $approverRut) {
                 throw ValidationException::withMessages([
                     'decision' => 'La solicitud del Químico Farmacéutico debe autorizarla otro Químico Farmacéutico.',
                 ]);
             }
 
-            $movementId = null;
-            if ($decision === 'APROBAR') {
-                $movementId = $this->adjust([
-                    'lote_id' => $adjustmentRequest->lote_id,
-                    'ubicacion_id' => $adjustmentRequest->ubicacion_id,
-                    'tipo_ajuste' => $adjustmentRequest->tipo_ajuste,
-                    'cantidad' => $adjustmentRequest->cantidad,
-                    'motivo' => $adjustmentRequest->motivo,
-                ], $approverRut, $requestId, $adjustmentRequest->usuario_solicita_rut);
+            $details = DB::table('solicitudes_ajuste_inventario')
+                ->where('grupo_ajuste_id', $adjustmentGroup->grupo_ajuste_id)
+                ->orderBy('solicitud_ajuste_id')
+                ->lockForUpdate()
+                ->get();
+            if ($details->isEmpty() || $details->contains(fn ($detail) => $detail->estado !== 'PENDIENTE')) {
+                throw ValidationException::withMessages([
+                    'decision' => 'Todas las líneas de la solicitud deben estar pendientes.',
+                ]);
             }
 
             $newStatus = $decision === 'APROBAR' ? 'APROBADA' : 'RECHAZADA';
-            DB::table('solicitudes_ajuste_inventario')
-                ->where('solicitud_ajuste_id', $requestId)
+            foreach ($details as $detail) {
+                $movementId = null;
+                if ($decision === 'APROBAR') {
+                    $movementId = $this->adjust([
+                        'lote_id' => $detail->lote_id,
+                        'ubicacion_id' => $detail->ubicacion_id,
+                        'tipo_ajuste' => $detail->tipo_ajuste,
+                        'cantidad' => $detail->cantidad,
+                        'motivo' => $detail->motivo,
+                    ], $approverRut, $detail->solicitud_ajuste_id, $adjustmentGroup->usuario_solicita_rut);
+                }
+
+                DB::table('solicitudes_ajuste_inventario')
+                    ->where('solicitud_ajuste_id', $detail->solicitud_ajuste_id)
+                    ->where('estado', 'PENDIENTE')
+                    ->update([
+                        'estado' => $newStatus,
+                        'usuario_autoriza_rut' => $approverRut,
+                        'movimiento_id' => $movementId,
+                        'motivo_resolucion' => $resolutionReason ? trim($resolutionReason) : null,
+                        'fecha_resolucion' => now(),
+                    ]);
+                $this->audit->record(
+                    $decision === 'APROBAR' ? 'AUTORIZACION_AJUSTE_INVENTARIO' : 'RECHAZO_AJUSTE_INVENTARIO',
+                    'solicitudes_ajuste_inventario',
+                    $detail->solicitud_ajuste_id,
+                    $newStatus,
+                    [
+                        'grupo_ajuste_id' => $adjustmentGroup->grupo_ajuste_id,
+                        'usuario_solicita_rut' => $adjustmentGroup->usuario_solicita_rut,
+                        'usuario_autoriza_rut' => $approverRut,
+                        'movimiento_id' => $movementId,
+                        'motivo_resolucion' => $resolutionReason ? trim($resolutionReason) : null,
+                    ]
+                );
+            }
+
+            DB::table('solicitudes_ajuste_grupos')
+                ->where('grupo_ajuste_id', $adjustmentGroup->grupo_ajuste_id)
                 ->where('estado', 'PENDIENTE')
                 ->update([
                     'estado' => $newStatus,
                     'usuario_autoriza_rut' => $approverRut,
-                    'movimiento_id' => $movementId,
                     'motivo_resolucion' => $resolutionReason ? trim($resolutionReason) : null,
                     'fecha_resolucion' => now(),
                 ]);
-            $this->audit->record(
-                $decision === 'APROBAR' ? 'AUTORIZACION_AJUSTE_INVENTARIO' : 'RECHAZO_AJUSTE_INVENTARIO',
-                'solicitudes_ajuste_inventario',
-                $requestId,
-                $newStatus,
-                [
-                    'usuario_solicita_rut' => $adjustmentRequest->usuario_solicita_rut,
-                    'usuario_autoriza_rut' => $approverRut,
-                    'movimiento_id' => $movementId,
-                    'motivo_resolucion' => $resolutionReason ? trim($resolutionReason) : null,
-                ]
-            );
         });
     }
 

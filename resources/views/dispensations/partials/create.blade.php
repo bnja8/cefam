@@ -5,6 +5,7 @@
             <form id="dispensation-form" action="{{ route('dispensations.store') }}" method="post" class="stack-form" data-dispensation-form>
                 @csrf
                 <input type="hidden" name="transcripcion_manual" value="1">
+                <input type="hidden" name="tratamiento_sos" value="{{ old('tratamiento_sos', '0') ? '1' : '0' }}" data-treatment-sos-mode>
                 <div class="form-grid">
                     <x-patient-search
                         id="patient-search"
@@ -14,9 +15,9 @@
                         required
                     />
                     <div class="form-group">
-                        <label for="receta_id">Receta vigente *</label>
+                        <label for="receta_id" data-recipe-select-label>Receta vigente *</label>
                         <select class="form-control" id="receta_id" name="receta_id" data-selected-recipe="{{ old('receta_id') }}" required disabled><option value="">Selecciona primero un paciente</option></select>
-                        <small>Al seleccionar una receta, se cargan sus medicamentos y lotes FEFO.</small>
+                        <small data-recipe-select-help>Al seleccionar una receta, se cargan sus medicamentos y lotes FEFO.</small>
                         @error('receta_id')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                     <div class="form-span dispensation-authorized-person-picker">
@@ -129,9 +130,10 @@
                     @error('confirmacion_receta')<small class="field-error">{{ $message }}</small>@enderror
                 </section>
                 <div class="detail-heading">
-                    <h3>Medicamentos prescritos</h3>
+                    <h3 data-dispensation-mode-title>Medicamentos prescritos</h3>
                     <span class="dispensation-recipe-summary" data-dispensation-recipe-summary aria-live="polite"></span>
                     <button class="btn btn-outline btn-small" type="button" data-add-row="dispensation-details"><i class="fa-solid fa-plus"></i> Agregar medicamento</button>
+                    <button class="btn btn-outline btn-small" type="button" data-toggle-sos-treatment aria-pressed="{{ old('tratamiento_sos') ? 'true' : 'false' }}">Tratamiento SOS</button>
                 </div>
                 <x-barcode-scanner-test />
                 <div id="dispensation-details" class="detail-rows" data-next-index="{{ count($detailRows) }}" data-distinct-products-list data-dispensation-details>
@@ -153,13 +155,12 @@
                                 :prescription="true"
                                 :show-availability="false"
                             />
-                            <div class="form-group prescription-field-dose"><label>Dosis por toma *</label><input class="form-control" name="detalles[{{ $index }}][unidades_por_toma]" type="number" min="0.01" step="0.01" value="{{ $detail['unidades_por_toma'] ?? '' }}" required data-dose-amount><small>Cantidad administrada en cada toma; la frecuencia indica el intervalo entre dosis.</small><small data-dose-unit></small></div>
-                            <div class="form-group prescription-field-duration"><label>Duración (días) *</label><input class="form-control" name="detalles[{{ $index }}][duracion_dias]" type="number" min="1" max="365" step="1" value="{{ $detail['duracion_dias'] ?? '' }}" required data-treatment-duration></div>
-                            <div class="form-group prescription-field-frequency"><label>Frecuencia *</label><input class="form-control" name="detalles[{{ $index }}][frecuencia]" maxlength="100" placeholder="Cada 8 horas" value="{{ $detail['frecuencia'] ?? '' }}" required data-prescription-frequency></div>
-                            <div class="form-group prescription-field-quantity"><label>Cantidad prescrita *</label><input class="form-control" name="detalles[{{ $index }}][cantidad_indicada]" type="number" min="0.01" step="0.01" value="{{ $detail['cantidad_indicada'] ?? '' }}" required data-prescribed-quantity></div>
+                            <div class="form-group prescription-field-dose" data-prescription-only><label>Dosis por toma *</label><input class="form-control" name="detalles[{{ $index }}][unidades_por_toma]" type="number" min="0.01" step="0.01" value="{{ $detail['unidades_por_toma'] ?? '' }}" required data-dose-amount><small>Cantidad administrada en cada toma; la frecuencia indica el intervalo entre dosis.</small><small data-dose-unit></small></div>
+                            <div class="form-group prescription-field-duration" data-prescription-only><label>Duración (días) *</label><input class="form-control" name="detalles[{{ $index }}][duracion_dias]" type="number" min="1" max="365" step="1" value="{{ $detail['duracion_dias'] ?? '' }}" required data-treatment-duration></div>
+                            <div class="form-group prescription-field-frequency" data-prescription-only><label>Frecuencia *</label><input class="form-control" name="detalles[{{ $index }}][frecuencia]" maxlength="100" placeholder="Cada 8 horas" value="{{ $detail['frecuencia'] ?? '' }}" required data-prescription-frequency></div>
+                            <div class="form-group prescription-field-quantity" data-prescription-only><label>Cantidad prescrita *</label><input class="form-control" name="detalles[{{ $index }}][cantidad_indicada]" type="number" min="0.01" step="0.01" value="{{ $detail['cantidad_indicada'] ?? '' }}" required data-prescribed-quantity></div>
                             <div class="form-group dispensation-field-delivery dispensation-transcription-status"><label for="dispensation-quantity-{{ $index }}">Cantidad a entregar *</label><input class="form-control" id="dispensation-quantity-{{ $index }}" name="detalles[{{ $index }}][cantidad]" type="number" min="0.01" step="0.01" value="{{ $detail['cantidad'] ?? '' }}" data-prescription-product="{{ $detail['producto_id'] ?? '' }}" required data-delivery-quantity><small data-delivery-quantity-help>Puede ser parcial; no supera el saldo pendiente.</small></div>
-                            <div class="form-group prescription-field-sos"><label class="check-label"><input type="checkbox" value="1" @checked(filter_var($detail['es_sos'] ?? false, FILTER_VALIDATE_BOOLEAN)) data-sos-treatment> Tratamiento SOS</label><input type="hidden" name="detalles[{{ $index }}][es_sos]" value="{{ filter_var($detail['es_sos'] ?? false, FILTER_VALIDATE_BOOLEAN) ? '1' : '0' }}" data-prescribed-sos-value><small>La cantidad prescrita será el máximo autorizado.</small></div>
-                            <div class="form-group detail-instructions prescription-field-instructions"><label>Indicaciones</label><input class="form-control" name="detalles[{{ $index }}][indicaciones]" maxlength="1000" value="{{ $detail['indicaciones'] ?? '' }}"></div>
+                            <div class="form-group detail-instructions prescription-field-instructions" data-prescription-only><label>Indicaciones</label><input class="form-control" name="detalles[{{ $index }}][indicaciones]" maxlength="1000" value="{{ $detail['indicaciones'] ?? '' }}"></div>
                             <button class="icon-btn detail-remove prescription-field-remove" type="button" aria-label="Eliminar medicamento" @disabled(count($detailRows) === 1)><i class="fa-solid fa-trash"></i></button>
                         </div>
                     @endforeach
@@ -179,13 +180,12 @@
                         <div class="dispensation-fefo-summary" data-prescription-fefo role="status" aria-live="polite" hidden></div>
                     </header>
                     <x-product-search id="dispensation-product-template" field-key="producto_id" barcode-url="{{ route('products.barcode.lookup') }}" fefo-url="{{ route('products.api.fefo', 0) }}" field-class="prescription-field-product" search-label="Medicamento *" search-help="Busca el medicamento indicado en la receta y selecciona un resultado." :prescription="true" :show-availability="false" />
-                    <div class="form-group prescription-field-dose"><label>Dosis por toma *</label><input class="form-control" data-name="unidades_por_toma" type="number" min="0.01" step="0.01" required data-dose-amount><small>Cantidad administrada en cada toma; la frecuencia indica el intervalo entre dosis.</small><small data-dose-unit></small></div>
-                    <div class="form-group prescription-field-duration"><label>Duración (días) *</label><input class="form-control" data-name="duracion_dias" type="number" min="1" max="365" step="1" required data-treatment-duration></div>
-                    <div class="form-group prescription-field-frequency"><label>Frecuencia *</label><input class="form-control" data-name="frecuencia" maxlength="100" placeholder="Cada 8 horas" required data-prescription-frequency></div>
-                    <div class="form-group prescription-field-quantity"><label>Cantidad prescrita *</label><input class="form-control" data-name="cantidad_indicada" type="number" min="0.01" step="0.01" required data-prescribed-quantity></div>
+                    <div class="form-group prescription-field-dose" data-prescription-only><label>Dosis por toma *</label><input class="form-control" data-name="unidades_por_toma" type="number" min="0.01" step="0.01" required data-dose-amount><small>Cantidad administrada en cada toma; la frecuencia indica el intervalo entre dosis.</small><small data-dose-unit></small></div>
+                    <div class="form-group prescription-field-duration" data-prescription-only><label>Duración (días) *</label><input class="form-control" data-name="duracion_dias" type="number" min="1" max="365" step="1" required data-treatment-duration></div>
+                    <div class="form-group prescription-field-frequency" data-prescription-only><label>Frecuencia *</label><input class="form-control" data-name="frecuencia" maxlength="100" placeholder="Cada 8 horas" required data-prescription-frequency></div>
+                    <div class="form-group prescription-field-quantity" data-prescription-only><label>Cantidad prescrita *</label><input class="form-control" data-name="cantidad_indicada" type="number" min="0.01" step="0.01" required data-prescribed-quantity></div>
                     <div class="form-group dispensation-field-delivery dispensation-transcription-status"><label>Cantidad a entregar *</label><input class="form-control" data-name="cantidad" type="number" min="0.01" step="0.01" required data-delivery-quantity><small data-delivery-quantity-help>Puede ser parcial; no supera el saldo pendiente.</small></div>
-                    <div class="form-group prescription-field-sos"><label class="check-label"><input type="checkbox" value="1" data-sos-treatment> Tratamiento SOS</label><input type="hidden" data-name="es_sos" value="0" data-prescribed-sos-value><small>La cantidad prescrita será el máximo autorizado.</small></div>
-                    <div class="form-group detail-instructions prescription-field-instructions"><label>Indicaciones</label><input class="form-control" data-name="indicaciones" maxlength="1000"></div>
+                    <div class="form-group detail-instructions prescription-field-instructions" data-prescription-only><label>Indicaciones</label><input class="form-control" data-name="indicaciones" maxlength="1000"></div>
                     <button class="icon-btn detail-remove prescription-field-remove" type="button" aria-label="Eliminar medicamento"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </template>
@@ -222,7 +222,7 @@
             <header class="delivery-order-dialog-header">
                 <span class="delivery-order-dialog-icon" aria-hidden="true"><img src="{{ asset('logo.jpg') }}" alt=""></span>
                 <div>
-                    <h2 id="dispensation-result-title">Receta Médica</h2>
+                    <h2 id="dispensation-result-title">{{ $order->es_sos ? 'Tratamiento SOS' : 'Receta Médica' }}</h2>
                     <p>CESFAM Central · Atención Primaria de Salud · Operación auditada</p>
                 </div>
                 <form method="dialog">
@@ -232,7 +232,7 @@
             <div class="delivery-order-dialog-body">
                 <div class="delivery-order-summary">
                     <div><span>N° ORDEN ENTREGA</span><strong>{{ $order->numero_orden }}</strong></div>
-                    <div><span>FOLIO RECETA COTEJADA</span><strong>{{ $order->numero_receta ?: 'Sin folio' }}</strong></div>
+                    <div><span>{{ $order->es_sos ? 'TIPO DE DISPENSACIÓN' : 'FOLIO RECETA COTEJADA' }}</span><strong>{{ $order->es_sos ? 'TRATAMIENTO SOS' : ($order->numero_receta ?: 'Sin folio') }}</strong></div>
                     <div><span>FECHA Y HORA DESPACHO</span><strong>{{ \Illuminate\Support\Carbon::parse($order->fecha_hora)->format('d/m/Y H:i') }}</strong></div>
                 </div>
                 <div class="delivery-order-parties">
@@ -242,8 +242,8 @@
                     </article>
                     <article>
                         <span>PERSONA QUE RETIRA</span>
-                        <strong>{{ $order->persona_autorizada ? $order->persona_autorizada.($order->persona_autorizada_rut ? ' ('.$order->persona_autorizada_rut.')' : '') : 'Paciente' }}</strong>
-                        <small>{{ $order->persona_autorizada ? 'Retiro por persona autorizada' : 'Retiro por titular' }}</small>
+                        <strong>{{ $order->es_sos ? 'SOS' : ($order->persona_autorizada ? $order->persona_autorizada.($order->persona_autorizada_rut ? ' ('.$order->persona_autorizada_rut.')' : '') : 'Paciente') }}</strong>
+                        <small>{{ $order->es_sos ? 'Dispensación de emergencia SOS' : ($order->persona_autorizada ? 'Retiro por persona autorizada' : 'Retiro por titular') }}</small>
                     </article>
                 </div>
                 <div class="delivery-order-items-wrap">

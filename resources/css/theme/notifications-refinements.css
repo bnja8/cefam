@@ -34,12 +34,12 @@
 .notification-toast-warning .notification-toast-icon { border-color: #f0e2c6; color: #91621b; background: #faf3e6; }
 .notification-toast-info .notification-toast-icon { border-color: #d7e5ec; color: #315f78; background: #edf4f7; }
 .notification-toast-copy { min-width: 0; padding-top: 1px; }
-.notification-toast-copy strong { display: block; color: #294453; font-size: 13px; font-weight: 700; line-height: 1.4; }
+.notification-toast-copy strong { display: block; color: var(--text); font-size: 13px; font-weight: 700; line-height: 1.4; }
 .notification-toast-error .notification-toast-copy strong { color: #8b3d45; }
 .notification-toast-warning .notification-toast-copy strong { color: #805919; }
-.notification-toast-info .notification-toast-copy strong { color: #315f78; }
-.notification-toast-copy p { margin: 3px 0 0; color: #5e707b; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.notification-toast-copy ul { margin: 3px 0 0; padding-left: 17px; color: #5e707b; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.notification-toast-info .notification-toast-copy strong { color: var(--primary-dark); }
+.notification-toast-copy p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.notification-toast-copy ul { margin: 3px 0 0; padding-left: 17px; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .notification-toast-dismiss {
     width: 30px;
     height: 30px;
@@ -48,12 +48,12 @@
     justify-content: center;
     border: 0;
     border-radius: 50%;
-    color: #788892;
+    color: var(--muted);
     background: transparent;
     cursor: pointer;
 }
 .notification-toast-dismiss:hover,
-.notification-toast-dismiss:focus-visible { color: #294453; background: #f0f4f3; }
+.notification-toast-dismiss:focus-visible { color: var(--text); background: #f0f4f3; }
 .notification-toast-dismiss:focus-visible { outline: 2px solid #6a9c87; outline-offset: 2px; }
 .notification-toast.is-dismissing { opacity: 0; transform: translateY(8px); transition: opacity .2s ease, transform .2s ease; }
 @keyframes notification-toast-enter {

@@ -14,11 +14,9 @@ use Illuminate\Validation\ValidationException;
 
 class SupplyRequestAction
 {
-    private const SUPPLY_OPERATORS = ['Administrador', 'Químico Farmacéutico', 'Técnico Farmacéutico'];
-
     public function storeRequest(Request $request, AuditLogger $audit, UserNotificationService $notifications): RedirectResponse|JsonResponse
     {
-        $this->authorizeSupplyOperation($audit, 'solicitudes_reposicion');
+        $this->authorizeSupplyOperation($audit, 'supplies.request', 'solicitudes_reposicion');
         $data = $request->validate([
             'detalles' => ['required', 'array', 'min:1', 'max:100'],
             'detalles.*.producto_id' => ['required', 'integer', 'exists:productos,producto_id,activo,1'],
@@ -70,10 +68,10 @@ class SupplyRequestAction
         return redirect()->route('supplies.requests.index')->with('status', 'Solicitud de reposición creada.');
     }
 
-    private function authorizeSupplyOperation(AuditLogger $audit, string $entity): void
+    private function authorizeSupplyOperation(AuditLogger $audit, string $permission, string $entity): void
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(self::SUPPLY_OPERATORS)) {
+        if (! $user instanceof Usuario || ! $user->hasPermission($permission)) {
             $audit->record('ACCESO_DENEGADO', $entity, null, 'RECHAZADO');
             abort(403);
         }

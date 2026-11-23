@@ -62,7 +62,7 @@ export const initializePersonLookup = () => {
                     const type = form.dataset.personType;
                     const duplicate = type !== 'personas_autorizadas' && Boolean(records[type]);
                     const record = records[type]
-                        || records.profesionales_salud
+                        || records.personal_salud
                         || records.usuarios
                         || records.pacientes
                         || records.personas_autorizadas;

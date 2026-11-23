@@ -22,6 +22,11 @@ class InventoryOperationService
         return $this->adjustments->requestAdjustment($data, $requesterRut);
     }
 
+    public function requestAdjustments(array $details, string $requesterRut): array
+    {
+        return $this->adjustments->requestAdjustments($details, $requesterRut);
+    }
+
     public function resolveAdjustmentRequest(int $requestId, string $approverRut, string $decision, ?string $resolutionReason = null): void
     {
         $this->adjustments->resolveAdjustmentRequest($requestId, $approverRut, $decision, $resolutionReason);

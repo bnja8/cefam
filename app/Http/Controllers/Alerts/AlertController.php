@@ -55,7 +55,7 @@ class AlertController extends Controller
             'isTechnician' => $isTechnician,
             'locations' => DB::table('ubicaciones')->orderBy('nombre')->get(['ubicacion_id', 'nombre']),
             'responsibles' => $isTechnician ? collect() : $queries->responsibles(self::REPLENISHMENT_ROLES),
-            'canManageReplenishment' => Auth::user()?->hasAnyRole(self::REPLENISHMENT_ROLES) ?? false,
+            'canManageReplenishment' => Auth::user()?->hasPermission('alerts.replenish') ?? false,
         ];
 
         return $request->expectsJson()
@@ -70,6 +70,7 @@ class AlertController extends Controller
 
             return redirect()->route('alerts.map');
         }
+        abort_unless(Auth::user()?->hasPermission('alerts.manage'), 403);
 
         $alertHistory = $queries->history();
 
@@ -95,12 +96,12 @@ class AlertController extends Controller
             'alert' => $alert,
             'responsibles' => $queries->responsibles(self::REPLENISHMENT_ROLES),
             'isTechnician' => $this->isTechnician(),
-            'canManageAlertActions' => Auth::user()?->hasAnyRole(self::ALERT_MANAGEMENT_ROLES) ?? false,
-            'canManageReplenishment' => Auth::user()?->hasAnyRole(self::REPLENISHMENT_ROLES) ?? false,
+            'canManageAlertActions' => Auth::user()?->hasPermission('alerts.manage') ?? false,
+            'canManageReplenishment' => Auth::user()?->hasPermission('alerts.replenish') ?? false,
             'canRequestExpiryWithdrawal' => $alert->tipo_alerta === 'VENCIDO'
                 && is_null($alert->resuelta_at)
                 && (string) $alert->responsable_rut === (string) Auth::id()
-                && (Auth::user()?->hasAnyRole(self::REPLENISHMENT_ROLES) ?? false),
+                && (Auth::user()?->hasPermission('alerts.replenish') ?? false),
         ];
 
         return $request->expectsJson()
@@ -110,7 +111,7 @@ class AlertController extends Controller
 
     public function replenish(int $alertId, AuditLogger $audit, Request $request): RedirectResponse|JsonResponse
     {
-        if (! (Auth::user()?->hasAnyRole(self::REPLENISHMENT_ROLES) ?? false)) {
+        if (! (Auth::user()?->hasPermission('alerts.replenish') ?? false)) {
             $audit->record('ACCESO_DENEGADO', 'solicitudes_reposicion', $alertId, 'RECHAZADO');
             abort(403);
         }
@@ -170,7 +171,7 @@ class AlertController extends Controller
         abort_unless($alert->resuelta_at === null, 422, 'La alerta ya fue resuelta.');
         abort_unless((string) $alert->responsable_rut === (string) Auth::id(), 403, 'Solo el responsable asignado puede solicitar este retiro.');
         abort_unless(
-            Auth::user()?->hasAnyRole(['Administrador', 'Químico Farmacéutico', 'Técnico Farmacéutico']),
+            Auth::user()?->hasPermission('alerts.replenish'),
             403
         );
         abort_unless($alert->lote_id && $alert->ubicacion_id, 422, 'La alerta no tiene un lote y ubicación para gestionar.');
@@ -200,12 +201,13 @@ class AlertController extends Controller
     // Asigna o reasigna una alerta conservando el historial.
     public function assign(int $alertId, Request $request, AuditLogger $audit, UserNotificationService $notifications): RedirectResponse|JsonResponse
     {
-        abort_unless(Auth::user()?->hasAnyRole(self::ALERT_MANAGEMENT_ROLES), 403);
+        abort_unless(Auth::user()?->hasPermission('alerts.manage'), 403);
         $data = $request->validate(['responsable_rut' => ['required', 'string', 'exists:usuarios,rut']]);
         $authorized = DB::table('usuarios')
             ->join('usuario_rol', 'usuario_rol.usuario_rut', '=', 'usuarios.rut')
             ->join('roles', 'roles.rol_id', '=', 'usuario_rol.rol_id')
             ->where('usuarios.rut', $data['responsable_rut'])
+            ->where('roles.activo', true)
             ->whereIn('roles.nombre', ['Administrador', 'Químico Farmacéutico', 'Técnico Farmacéutico'])
             ->exists();
         abort_unless($authorized, 422, 'El responsable debe ser Administrador, Químico Farmacéutico o Técnico Farmacéutico.');
@@ -232,7 +234,7 @@ class AlertController extends Controller
     // Reconoce una alerta sin resolverla ni modificar el inventario.
     public function acknowledge(int $alertId, AuditLogger $audit, Request $request): RedirectResponse|JsonResponse
     {
-        abort_unless(Auth::user()?->hasAnyRole(self::ALERT_MANAGEMENT_ROLES), 403);
+        abort_unless(Auth::user()?->hasPermission('alerts.manage'), 403);
         DB::transaction(function () use ($alertId, $audit) {
             $alert = DB::table('alertas')->where('alerta_id', $alertId)->lockForUpdate()->first();
             abort_unless($alert, 404);
@@ -257,7 +259,7 @@ class AlertController extends Controller
     // Registra seguimiento operativo sin dar por resuelta la condición.
     public function follow(int $alertId, Request $request, AuditLogger $audit): RedirectResponse|JsonResponse
     {
-        abort_unless(Auth::user()?->hasAnyRole(self::ALERT_MANAGEMENT_ROLES), 403);
+        abort_unless(Auth::user()?->hasPermission('alerts.manage'), 403);
         $data = $request->validate(['observacion' => ['required', 'string', 'max:1000']]);
         DB::transaction(function () use ($alertId, $data, $audit) {
             $alert = DB::table('alertas')->where('alerta_id', $alertId)->lockForUpdate()->first();

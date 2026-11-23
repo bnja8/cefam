@@ -7,6 +7,7 @@ use App\Models\Usuario;
 use App\Services\Audit\AuditLogger;
 use App\Services\Modules\ModuleQueryService;
 use App\Support\People\ChileanMobilePhone;
+use App\Support\People\PersonName;
 use App\Support\People\Rut;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
@@ -42,8 +43,13 @@ class ModuleController extends Controller
 
         $user = Auth::user();
         $screen = $request->route('screen', 'list');
-        if (in_array($module, ['administracion', 'reportes'], true)
-            && (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico']))) {
+        $requiredPermission = match ($module) {
+            'administracion' => 'users.view',
+            'reportes' => 'reports.view',
+            default => null,
+        };
+        if ($requiredPermission !== null
+            && (! $user instanceof Usuario || ! $user->hasPermission($requiredPermission))) {
             $audit->record('ACCESO_DENEGADO', $module, null, 'RECHAZADO');
             abort(403);
         }
@@ -53,7 +59,8 @@ class ModuleController extends Controller
 
             if ($request->expectsJson()) {
                 return response()->json(['data' => [], 'options' => [
-                    'roles' => DB::table('roles')->orderBy('nombre')->get(['rol_id', 'nombre']),
+                    'roles' => DB::table('roles')->where('activo', true)->orderBy('nombre')->get(['rol_id', 'nombre']),
+                    'personal' => $this->availablePersonal(),
                 ]]);
             }
 
@@ -62,7 +69,8 @@ class ModuleController extends Controller
                 'description' => self::MODULES[$module][1],
                 'module' => $module,
                 'screen' => $screen,
-                'roles' => DB::table('roles')->orderBy('nombre')->get(['rol_id', 'nombre']),
+                'roles' => DB::table('roles')->where('activo', true)->orderBy('nombre')->get(['rol_id', 'nombre']),
+                'personal' => $this->availablePersonal(),
             ]);
         }
 
@@ -125,7 +133,13 @@ class ModuleController extends Controller
             'apellidoMaterno' => ['required', 'string', 'max:50'],
             'telefono' => ['nullable', 'string', 'regex:/^\+56 9 \d{8}$/'],
             'password' => ['required', 'string', 'min:12'],
-            'rol_id' => ['required', 'integer', 'exists:roles,rol_id'],
+            'rol_id' => ['required', 'integer', Rule::exists('roles', 'rol_id')->where(fn ($query) => $query->where('activo', true))],
+            'personal_rut' => [
+                'nullable',
+                'string',
+                Rule::exists('personal_salud', 'rut')->where(fn ($query) => $query
+                    ->whereNull('usuario_rut')->where('activo', true)),
+            ],
         ], [
             'required' => 'El campo :attribute es obligatorio.',
         ], [
@@ -151,6 +165,12 @@ class ModuleController extends Controller
                 'usuario_rut' => $data['rut'],
                 'rol_id' => $data['rol_id'],
             ]);
+            if (! empty($data['personal_rut'])) {
+                DB::table('personal_salud')
+                    ->where('rut', $data['personal_rut'])
+                    ->whereNull('usuario_rut')
+                    ->update(['usuario_rut' => $data['rut']]);
+            }
             $audit->record('CREACION', 'usuarios', null, 'EXITOSO', ['rut' => $data['rut'], 'rol_id' => $data['rol_id']]);
 
             return $data['rut'];
@@ -166,6 +186,7 @@ class ModuleController extends Controller
                     'apellidoMaterno' => $data['apellidoMaterno'] ?? null,
                     'telefono' => $data['telefono'] ?? null,
                     'rol_id' => $data['rol_id'],
+                    'personal_rut' => $data['personal_rut'] ?? null,
                     'activo' => true,
                 ],
             ], 201);
@@ -178,6 +199,7 @@ class ModuleController extends Controller
     {
         $this->authorizeAdministrator($audit, 'usuarios', $userRut);
         $user = DB::table('usuarios')->leftJoin('usuario_rol', 'usuario_rol.usuario_rut', '=', 'usuarios.rut')
+            ->leftJoin('personal_salud', 'personal_salud.usuario_rut', '=', 'usuarios.rut')
             ->where('usuarios.rut', $userRut)
             ->first([
                 'usuarios.rut',
@@ -187,14 +209,22 @@ class ModuleController extends Controller
                 'usuarios.telefono',
                 'usuarios.activo',
                 'usuario_rol.rol_id',
+                'personal_salud.rut as personal_rut',
             ]);
         abort_unless($user, 404);
+        $roles = DB::table('roles')
+            ->where(function ($query) use ($user) {
+                $query->where('activo', true)->orWhere('rol_id', $user->rol_id);
+            })
+            ->orderBy('nombre')
+            ->get(['rol_id', 'nombre', 'activo']);
 
         if ($request->expectsJson()) {
             return response()->json([
                 'data' => $user,
                 'options' => [
-                    'roles' => DB::table('roles')->orderBy('nombre')->get(['rol_id', 'nombre']),
+                    'roles' => $roles,
+                    'personal' => $this->availablePersonal($userRut),
                     'canChangeRole' => $userRut !== Auth::id(),
                 ],
             ]);
@@ -202,7 +232,8 @@ class ModuleController extends Controller
 
         return view('modules.user-edit', [
             'user' => $user,
-            'roles' => DB::table('roles')->orderBy('nombre')->get(['rol_id', 'nombre']),
+            'roles' => $roles,
+            'personal' => $this->availablePersonal($userRut),
         ]);
     }
 
@@ -232,8 +263,32 @@ class ModuleController extends Controller
             'password' => ['nullable', 'string', 'min:12'],
         ];
         if ($userRut !== Auth::id()) {
-            $rules['rol_id'] = ['required', 'integer', 'exists:roles,rol_id'];
+            $currentRoleId = DB::table('usuario_rol')
+                ->where('usuario_rut', $userRut)
+                ->value('rol_id');
+            $rules['rol_id'] = [
+                'required',
+                'integer',
+                function ($attribute, $value, $fail) use ($currentRoleId): void {
+                    $isActiveRole = DB::table('roles')
+                        ->where('rol_id', $value)
+                        ->where('activo', true)
+                        ->exists();
+                    if (! $isActiveRole && (int) $value !== (int) $currentRoleId) {
+                        $fail('Selecciona un rol activo.');
+                    }
+                },
+            ];
         }
+        $rules['personal_rut'] = [
+            'nullable',
+            'string',
+            Rule::exists('personal_salud', 'rut')->where(fn ($query) => $query
+                ->where(function ($query) use ($userRut) {
+                    $query->where(fn ($query) => $query->whereNull('usuario_rut')->where('activo', true))
+                        ->orWhere('usuario_rut', $userRut);
+                })),
+        ];
         $data = $request->validate($rules);
 
         DB::transaction(function () use ($data, $userRut) {
@@ -247,6 +302,14 @@ class ModuleController extends Controller
                 $changes['password_hash'] = Hash::make($data['password']);
             }
             DB::table('usuarios')->where('rut', $userRut)->update($changes);
+
+            if (array_key_exists('personal_rut', $data)) {
+                DB::table('personal_salud')->where('usuario_rut', $userRut)->update(['usuario_rut' => null]);
+                if ($data['personal_rut'] !== null) {
+                    DB::table('personal_salud')->where('rut', $data['personal_rut'])
+                        ->whereNull('usuario_rut')->update(['usuario_rut' => $userRut]);
+                }
+            }
 
             if ($userRut !== Auth::id()) {
                 DB::table('usuario_rol')->where('usuario_rut', $userRut)->delete();
@@ -289,5 +352,20 @@ class ModuleController extends Controller
         }
 
         return redirect()->route('users.index')->with('status', 'Estado de la cuenta actualizado.');
+    }
+
+    private function availablePersonal(?string $userRut = null): \Illuminate\Support\Collection
+    {
+        return DB::table('personal_salud')
+            ->where(function ($query) use ($userRut) {
+                $query->where(function ($query) {
+                    $query->whereNull('usuario_rut')->where('activo', true);
+                });
+                if ($userRut !== null) {
+                    $query->orWhere('usuario_rut', $userRut);
+                }
+            })
+            ->orderBy('apellidoPaterno')->orderBy('apellidoMaterno')->orderBy('nombre')
+            ->get(['rut', PersonName::expression('personal_salud', 'nombre_completo')]);
     }
 }

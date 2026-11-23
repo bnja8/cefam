@@ -127,7 +127,7 @@ class PersonAdministrationApiTest extends TestCase
 
         $this->assertDatabaseHas('pacientes', ['rut' => '222222222', 'activo' => false]);
         $this->assertDatabaseHas('usuarios', ['rut' => '111111111', 'telefono' => '+56 9 12345678']);
-        $this->assertDatabaseHas('profesionales_salud', ['rut' => '222222222', 'activo' => true]);
+        $this->assertDatabaseHas('personal_salud', ['rut' => '222222222', 'activo' => true]);
         $this->assertDatabaseHas('personas_autorizadas', ['persona_autorizada_id' => $authorizedPerson['persona_autorizada_id'], 'activo' => true]);
         $this->assertDatabaseHas('programas_salud', ['programa_id' => $program['programa_id'], 'nombre' => 'Programa API actualizado', 'activo' => false]);
         $this->assertDatabaseHas('usuarios', ['rut' => '111111111', 'activo' => false]);

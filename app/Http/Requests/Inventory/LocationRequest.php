@@ -12,7 +12,7 @@ abstract class LocationRequest extends FormRequest
     public function authorize(AuditLogger $audit): bool
     {
         $user = $this->user();
-        if ($user instanceof Usuario && $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
+        if ($user instanceof Usuario && $user->hasPermission('inventory.catalog.manage')) {
             return true;
         }
 

@@ -6,7 +6,7 @@ use Illuminate\Validation\Rule;
 
 class StoreCategoryRequest extends InventoryRequest
 {
-    protected const AUTHORIZED_ROLES = ['Administrador', 'Químico Farmacéutico'];
+    protected const AUTHORIZED_PERMISSION = 'inventory.catalog.manage';
 
     protected const AUDIT_ENTITY = 'categorias_producto';
 

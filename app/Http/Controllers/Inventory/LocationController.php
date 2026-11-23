@@ -19,7 +19,7 @@ class LocationController extends Controller
 {
     public function index(Request $request, AuditLogger $audit, InventoryLocationService $locations): View|JsonResponse
     {
-        $this->authorizeLocationManager($audit);
+        $this->authorizeLocationManager($audit, 'inventory.catalog.view');
         $locationPage = $locations->paginate()->withQueryString();
 
         if ($request->expectsJson()) {
@@ -29,12 +29,13 @@ class LocationController extends Controller
         return view('inventory.locations.index', [
             'locations' => $locationPage,
             'types' => InventoryLocationTypes::OPTIONS,
+            'canManageLocations' => Auth::user()?->hasPermission('inventory.catalog.manage') ?? false,
         ]);
     }
 
     public function create(Request $request, AuditLogger $audit): View|JsonResponse
     {
-        $this->authorizeLocationManager($audit);
+        $this->authorizeLocationManager($audit, 'inventory.catalog.manage');
         if ($request->expectsJson()) {
             return response()->json(['data' => [
                 'location' => null,
@@ -70,7 +71,7 @@ class LocationController extends Controller
         AuditLogger $audit,
         InventoryLocationService $locations
     ): View|JsonResponse {
-        $this->authorizeLocationManager($audit, $locationId);
+        $this->authorizeLocationManager($audit, 'inventory.catalog.manage', $locationId);
         $data = $locations->formData($locationId);
 
         if ($request->expectsJson()) {
@@ -102,10 +103,10 @@ class LocationController extends Controller
     }
 
     // Autoriza la gestión de ubicaciones y audita denegaciones.
-    private function authorizeLocationManager(AuditLogger $audit, ?int $locationId = null): void
+    private function authorizeLocationManager(AuditLogger $audit, string $permission, ?int $locationId = null): void
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
+        if (! $user instanceof Usuario || ! $user->hasPermission($permission)) {
             $audit->record('ACCESO_DENEGADO', 'ubicaciones', $locationId, 'RECHAZADO');
             abort(403);
         }

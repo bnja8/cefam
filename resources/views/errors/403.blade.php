@@ -14,7 +14,7 @@
     <main class="login-card">
         <div class="login-brand">
             <span class="sidebar-logo-icon"><img src="{{ asset('logo.jpg') }}" alt=""></span>
-            <div><strong>Farmacia Asistencial</strong><small>Atención Primaria de Salud · APS</small></div>
+            <div><strong>Farmacia Asistencial</strong></div>
         </div>
         <h1>ACCESO NO AUTORIZADO</h1>
         <p class="muted">Tu perfil no tiene permiso para realizar esta acción. Si necesitas acceso, contacta a un administrador.</p>

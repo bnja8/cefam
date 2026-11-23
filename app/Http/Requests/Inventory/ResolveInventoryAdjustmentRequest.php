@@ -6,7 +6,7 @@ use Illuminate\Validation\Rule;
 
 class ResolveInventoryAdjustmentRequest extends InventoryRequest
 {
-    protected const AUTHORIZED_ROLES = ['Químico Farmacéutico'];
+    protected const AUTHORIZED_PERMISSION = 'inventory.adjust.resolve';
 
     protected const AUDIT_ENTITY = 'solicitudes_ajuste_inventario';
 

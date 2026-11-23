@@ -12,9 +12,9 @@ class ModuleQueryService
     {
         return match ($module) {
             'recetas' => DB::table('recetas')->join('pacientes', 'pacientes.rut', '=', 'recetas.paciente_rut')
-                ->join('profesionales_salud', 'profesionales_salud.rut', '=', 'recetas.profesional_rut')
+                ->join('personal_salud', 'personal_salud.rut', '=', 'recetas.profesional_rut')
                 ->orderByDesc('recetas.fecha_emision')->limit(100)
-                ->get(['recetas.numero_receta', PersonName::expression('pacientes', 'paciente'), PersonName::expression('profesionales_salud', 'profesional'), 'recetas.tipo_receta', 'recetas.fecha_vencimiento', 'recetas.estado']),
+                ->get(['recetas.numero_receta', PersonName::expression('pacientes', 'paciente'), PersonName::expression('personal_salud', 'profesional'), 'recetas.tipo_receta', 'recetas.fecha_vencimiento', 'recetas.estado']),
             'programas' => DB::table('programas_salud')->orderBy('nombre')
                 ->get(['nombre', 'descripcion', 'activo']),
             'cenabast' => DB::table('remesas')->join('usuarios', 'usuarios.rut', '=', 'remesas.usuario_rut')
@@ -43,6 +43,7 @@ class ModuleQueryService
                 ]),
             'administracion' => DB::table('usuarios')->leftJoin('usuario_rol', 'usuario_rol.usuario_rut', '=', 'usuarios.rut')
                 ->leftJoin('roles', 'roles.rol_id', '=', 'usuario_rol.rol_id')
+                ->leftJoin('personal_salud', 'personal_salud.usuario_rut', '=', 'usuarios.rut')
                 ->when($filters['estado'] === 'activo', fn ($query) => $query->where('usuarios.activo', true))
                 ->when($filters['estado'] === 'inactivo', fn ($query) => $query->where('usuarios.activo', false))
                 ->when($filters['rol_id'], fn ($query, $roleId) => $query->where('roles.rol_id', $roleId))
@@ -59,7 +60,16 @@ class ModuleQueryService
                     });
                 })
                 ->orderBy('usuarios.apellidoPaterno')->orderBy('usuarios.apellidoMaterno')->orderBy('usuarios.nombre')
-                ->paginate(15, ['usuarios.rut', PersonName::expression('usuarios', 'nombre_completo'), 'usuarios.telefono', 'usuarios.activo', 'roles.nombre as rol'])
+                ->paginate(15, [
+                    'usuarios.rut',
+                    PersonName::expression('usuarios', 'nombre_completo'),
+                    'usuarios.telefono',
+                    'usuarios.activo',
+                    'roles.nombre as rol',
+                    'roles.activo as rol_activo',
+                    'personal_salud.rut as personal_rut',
+                    PersonName::expression('personal_salud', 'personal_nombre'),
+                ])
                 ->withQueryString(),
             'libro-digital' => DB::table('movimientos_controlados')->join('productos', 'productos.producto_id', '=', 'movimientos_controlados.producto_id')
                 ->join('lotes', 'lotes.lote_id', '=', 'movimientos_controlados.lote_id')

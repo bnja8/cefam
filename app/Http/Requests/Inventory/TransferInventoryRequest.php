@@ -4,7 +4,7 @@ namespace App\Http\Requests\Inventory;
 
 class TransferInventoryRequest extends InventoryRequest
 {
-    protected const AUTHORIZED_ROLES = ['Administrador', 'Químico Farmacéutico'];
+    protected const AUTHORIZED_PERMISSION = 'inventory.transfer';
 
     protected const AUDIT_ENTITY = 'traspasos_inventario';
 

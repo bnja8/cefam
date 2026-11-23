@@ -55,7 +55,6 @@ export const initializeDynamicForms = () => {
         const duration = row.querySelector('[data-treatment-duration]');
         const frequency = row.querySelector('[data-prescription-frequency]');
         const quantity = row.querySelector('[data-prescribed-quantity]');
-        const sos = row.querySelector('[data-sos-treatment]');
         const unit = row.querySelector('[data-dose-unit]');
         const context = row.querySelector('[data-prescription-context]');
         const suggestion = row.querySelector('[data-quantity-suggestion]');
@@ -73,19 +72,6 @@ export const initializeDynamicForms = () => {
                     : '';
             }
         };
-        const updateSosFields = () => {
-            const isSos = Boolean(sos?.checked);
-            if (duration) {
-                duration.required = !isSos;
-                duration.disabled = isSos;
-                if (isSos) duration.value = '';
-            }
-            if (frequency) {
-                frequency.required = !isSos;
-                frequency.disabled = isSos;
-                frequency.value = isSos ? 'SOS' : (frequency.value === 'SOS' ? '' : frequency.value);
-            }
-        };
         const getDosesPerDay = () => {
             const match = frequency?.value.trim().match(/^(?:cada\s*)?(\d+(?:[.,]\d+)?)\s*(?:h|horas?)?$/iu);
             if (!match) return null;
@@ -99,7 +85,7 @@ export const initializeDynamicForms = () => {
             const monthlyLimit = Boolean(treatmentToggle?.checked);
             const days = Number(duration?.value);
             const total = doseAmount * perDay * days;
-            const valid = !monthlyLimit && !sos?.checked && doseAmount > 0 && perDay !== null && days > 0;
+            const valid = !monthlyLimit && doseAmount > 0 && perDay !== null && days > 0;
             if (quantityLabel) {
                 quantityLabel.textContent = monthlyLimit ? 'Cantidad prescrita al mes *' : 'Cantidad prescrita *';
             }
@@ -118,10 +104,6 @@ export const initializeDynamicForms = () => {
             updateSuggestion();
         });
         [dose, frequency, duration].forEach((input)  => input?.addEventListener('input', updateSuggestion));
-        sos?.addEventListener('change', ()  => {
-            updateSosFields();
-            updateSuggestion();
-        });
         applySuggestion?.addEventListener('click', ()  => {
             if (treatmentToggle?.checked) return;
             const perDay = getDosesPerDay();
@@ -131,9 +113,56 @@ export const initializeDynamicForms = () => {
             quantity.dispatchEvent(new Event('input', { bubbles: true }));
         });
         updateProductContext();
-        updateSosFields();
         updateSuggestion();
     };
+
+    const bindInventoryAdjustmentRow = (row) => {
+        const product = row.querySelector('.adjustment-field-product [data-product-select]');
+        const lot = row.querySelector('[data-adjustment-lot]');
+        const location = row.querySelector('[data-adjustment-location]');
+        const stockLabel = row.querySelector('[data-adjustment-lot-stock]');
+        const lotOptionsTemplate = document.getElementById('adjustment-lot-options');
+        if (!product || !lot || !lotOptionsTemplate || lot.dataset.adjustmentLotsBound) return;
+
+        lot.dataset.adjustmentLotsBound = 'true';
+        const lotOptions = lotOptionsTemplate.content.querySelectorAll('option[data-product]');
+        const formatQuantity = (quantity) => new Intl.NumberFormat('es-CL', { maximumFractionDigits: 2 }).format(quantity);
+        const updateStockLabel = () => {
+            if (!stockLabel) return;
+            const option = lot.selectedOptions[0];
+            if (!option?.value) {
+                stockLabel.textContent = '';
+                return;
+            }
+
+            const unit = option.dataset.unit || 'unid.';
+            if (!location?.value) {
+                stockLabel.textContent = `Existencia total del lote: ${formatQuantity(Number(option.dataset.stock || 0))} ${unit}. Selecciona una ubicación para ver su stock.`;
+                return;
+            }
+
+            const stockByLocation = JSON.parse(option.dataset.stockByLocation || '{}');
+            const locationName = location.selectedOptions[0]?.textContent.trim() || 'ubicación seleccionada';
+            stockLabel.textContent = `Existencia en ${locationName}: ${formatQuantity(Number(stockByLocation[location.value] || 0))} ${unit}.`;
+        };
+        const updateLots = () => {
+            const selectedLot = lot.value || lot.dataset.selectedLot || '';
+            lot.replaceChildren(new Option('Selecciona lote', ''));
+            lotOptions.forEach((option) => {
+                if (!product.value || option.dataset.product !== product.value) return;
+                const matchingOption = option.cloneNode(true);
+                if (matchingOption.value === selectedLot) matchingOption.selected = true;
+                lot.append(matchingOption);
+            });
+            lot.dataset.selectedLot = '';
+            updateStockLabel();
+        };
+        product.addEventListener('change', updateLots);
+        lot.addEventListener('change', updateStockLabel);
+        location?.addEventListener('change', updateStockLabel);
+        updateLots();
+    };
+
     const bindDetailRemove = (row) => {
         const button = row.querySelector('.detail-remove');
         if (!button || button.disabled || button.dataset.removeBound) return;
@@ -192,6 +221,8 @@ export const initializeDynamicForms = () => {
                         ? 'program-quota-product'
                         : target.id === 'shipment-request-details'
                             ? 'shipment-request-product'
+                            : target.id === 'adjustment-details'
+                                ? 'adjustment-product'
                             : target.id === 'unidosis-details'
                                 ? 'unidosis-product'
                         : 'dispensation-product';
@@ -206,8 +237,14 @@ export const initializeDynamicForms = () => {
                 if (help) help.id = `${productId}-help`;
                 if (stock) stock.id = `${productId}-stock`;
             }
+            row.querySelectorAll('[data-adjustment-field]').forEach((field) => {
+                const fieldName = field.dataset.adjustmentField;
+                field.id = `adjustment-${fieldName}-${index}`;
+                row.querySelector(`[data-adjustment-label="${fieldName}"]`)?.setAttribute('for', field.id);
+            });
             bindDetailRemove(row);
             target.append(row);
+            if (row.matches('[data-adjustment-row]')) bindInventoryAdjustmentRow(row);
             if (row.matches('[data-program-quota-row]')) bindProgramQuotaRow(row);
             if (row.matches('[data-prescription-row]')) bindPrescriptionRow(row);
             if (target.matches('[data-dispensation-details]')) {
@@ -218,6 +255,7 @@ export const initializeDynamicForms = () => {
     });
 
     document.querySelectorAll('[data-prescription-row]').forEach(bindPrescriptionRow);
+    document.querySelectorAll('[data-adjustment-row]').forEach(bindInventoryAdjustmentRow);
     treatmentToggle?.addEventListener('change', () => {
         document.querySelectorAll('[data-prescription-row]').forEach((row) => {
             row.querySelector('[data-dose-amount]')?.dispatchEvent(new Event('input', { bubbles: true }));

@@ -57,7 +57,7 @@ class ModuleApiTest extends TestCase
     {
         $this->actingAs(Usuario::where('rut', '12345674')->firstOrFail());
         $patientRut = DB::table('pacientes')->where('rut', '123456785')->value('rut');
-        $professionalRut = DB::table('profesionales_salud')->value('rut');
+        $professionalRut = DB::table('personal_salud')->value('rut');
         $productId = DB::table('productos')->where('numero_serie', 'MED-001')->value('producto_id');
         $startDate = now()->toDateString();
         $endDate = now()->addMonth()->toDateString();

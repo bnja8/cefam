@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Iniciar sesión | Farmacia Asistencial</title>
     <link rel="icon" type="image/jpeg" href="{{ asset('logo.jpg') }}?v={{ filemtime(public_path('logo.jpg')) }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @unless (app()->environment('testing'))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -15,7 +13,7 @@
 <body class="login-page">
     @include('partials.flash')
     <main class="login-card">
-        <div class="login-brand"><span class="sidebar-logo-icon"><img src="{{ asset('logo.jpg') }}" alt=""></span><div><strong>Farmacia Asistencial</strong><small>Atención Primaria de Salud · APS</small></div></div>
+        <div class="login-brand"><span class="sidebar-logo-icon"><img src="{{ asset('logo.jpg') }}" alt=""></span><div><strong>Farmacia Asistencial</strong></div></div>
         <h1>Bienvenido</h1>
         <p class="muted">Ingresa con tu cuenta institucional para continuar.</p>
         <form method="post" action="{{ route('login.store') }}" class="stack-form">

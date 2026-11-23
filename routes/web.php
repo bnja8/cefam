@@ -16,6 +16,7 @@ use App\Http\Controllers\Inventory\LocationController;
 use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Modules\ModuleController;
 use App\Http\Controllers\Modules\ModuleHubController;
+use App\Http\Controllers\Modules\RolePermissionController;
 use App\Http\Controllers\Notifications\NotificationController;
 use App\Http\Controllers\Patients\PatientController;
 use App\Http\Controllers\Patients\PatientFileController;
@@ -110,7 +111,6 @@ Route::middleware('auth')->group(/* Define la acción que atiende la ruta. */ fu
     Route::patch('/alertas/{alertId}/reconocer', [AlertController::class, 'acknowledge'])->whereNumber('alertId')->name('alerts.acknowledge');
     Route::post('/alertas/{alertId}/seguimiento', [AlertController::class, 'follow'])->whereNumber('alertId')->name('alerts.follow');
 
-    Route::get('/reportes', [ReportController::class, 'index'])->defaults('screen', 'summary')->name('reports.index');
     Route::get('/reportes/entregas', [ReportController::class, 'index'])->defaults('screen', 'deliveries')->name('reports.deliveries');
     Route::get('/reportes/existencias', [ReportController::class, 'index'])->defaults('screen', 'stock')->name('reports.stock');
     Route::get('/reportes/movimientos', [ReportController::class, 'index'])->defaults('screen', 'movements')->name('reports.movements');
@@ -137,6 +137,9 @@ Route::middleware('auth')->group(/* Define la acción que atiende la ruta. */ fu
     Route::get('/inventario/traspasos/crear', [InventoryOperationController::class, 'createTransfer'])->name('inventory.transfer.form');
     Route::get('/inventario/ajustes', [InventoryOperationController::class, 'adjustmentRequests'])->name('inventory.adjustments.index');
     Route::get('/inventario/ajustes/crear', [InventoryOperationController::class, 'createAdjustment'])->name('inventory.adjust.form');
+    Route::get('/inventario/ajustes/{groupId}', [InventoryOperationController::class, 'showAdjustmentRequest'])
+        ->whereNumber('groupId')
+        ->name('inventory.adjustments.show');
     Route::get('/api/inventario', [InventoryController::class, 'apiIndex'])->name('inventory.api.index');
     Route::get('/api/medicamentos/{productId}/lotes', [InventoryController::class, 'apiProductLots'])
         ->whereNumber('productId')
@@ -198,6 +201,16 @@ Route::middleware('auth')->group(/* Define la acción que atiende la ruta. */ fu
     Route::get('/usuarios/{userRut}/editar', [ModuleController::class, 'editUser'])->name('users.edit');
     Route::put('/usuarios/{userRut}', [ModuleController::class, 'updateUser'])->name('users.update');
     Route::patch('/usuarios/{userRut}/estado', [ModuleController::class, 'toggleUser'])->name('users.toggle');
+    Route::get('/roles', [RolePermissionController::class, 'index'])->name('roles.index');
+    Route::get('/roles/crear', [RolePermissionController::class, 'create'])->name('roles.create');
+    Route::post('/roles', [RolePermissionController::class, 'store'])->name('roles.store');
+    Route::get('/roles/{roleId}/permisos', [RolePermissionController::class, 'showPermissions'])
+        ->whereNumber('roleId')->name('roles.permissions.show');
+    Route::get('/permisos', [RolePermissionController::class, 'index'])->name('permissions.index');
+    Route::put('/roles/{roleId}/permisos', [RolePermissionController::class, 'updatePermissions'])
+        ->whereNumber('roleId')->name('roles.permissions.update');
+    Route::patch('/roles/{roleId}/estado', [RolePermissionController::class, 'toggleStatus'])
+        ->whereNumber('roleId')->name('roles.toggle');
 });
 
 Route::fallback(/* Define la acción que atiende la ruta. */ fn () => response()->view('errors.404', [], 404));

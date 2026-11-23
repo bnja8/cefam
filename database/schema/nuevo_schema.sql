@@ -487,14 +487,18 @@ CREATE TABLE `productos_principios_activos` (
   CONSTRAINT `producto_principios_unidad_fk` FOREIGN KEY (`concentracion_unidad_id`) REFERENCES `unidades_medida` (`unidad_medida_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `profesionales_salud` (
+CREATE TABLE `personal_salud` (
   `rut` varchar(12) COLLATE utf8mb4_unicode_ci NOT NULL,
   `nombre` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `apellidoPaterno` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `apellidoMaterno` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `tipo_profesional` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `especialidad` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `usuario_rut` varchar(12) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `activo` tinyint(1) NOT NULL DEFAULT '1',
-  PRIMARY KEY (`rut`)
+  PRIMARY KEY (`rut`),
+  UNIQUE KEY `personal_salud_usuario_rut_unique` (`usuario_rut`),
+  CONSTRAINT `personal_salud_usuario_rut_foreign` FOREIGN KEY (`usuario_rut`) REFERENCES `usuarios` (`rut`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `programas_salud` (
@@ -548,7 +552,7 @@ CREATE TABLE `recetas` (
   KEY `recetas_ficha_id_foreign` (`ficha_id`),
   CONSTRAINT `fk_recetas_paciente_rut` FOREIGN KEY (`paciente_rut`) REFERENCES `pacientes` (`rut`),
   CONSTRAINT `recetas_ficha_id_foreign` FOREIGN KEY (`ficha_id`) REFERENCES `fichas_pacientes` (`ficha_id`),
-  CONSTRAINT `fk_recetas_profesional_rut` FOREIGN KEY (`profesional_rut`) REFERENCES `profesionales_salud` (`rut`),
+  CONSTRAINT `fk_recetas_profesional_rut` FOREIGN KEY (`profesional_rut`) REFERENCES `personal_salud` (`rut`),
   CONSTRAINT `recetas_chk_1` CHECK ((`tipo_receta` in (_utf8mb4'ESTANDAR',_utf8mb4'RETENIDA'))),
   CONSTRAINT `recetas_chk_2` CHECK ((`estado` in (_utf8mb4'VIGENTE',_utf8mb4'VENCIDA',_utf8mb4'ANULADA',_utf8mb4'UTILIZADA'))),
   CONSTRAINT `recetas_chk_3` CHECK ((`fecha_vencimiento` >= `fecha_emision`))
@@ -598,8 +602,32 @@ CREATE TABLE `roles` (
   `rol_id` bigint NOT NULL AUTO_INCREMENT,
   `nombre` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `descripcion` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `slug` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `permissions_initialized` tinyint(1) NOT NULL DEFAULT '0',
+  `activo` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`rol_id`),
-  UNIQUE KEY `nombre` (`nombre`)
+  UNIQUE KEY `nombre` (`nombre`),
+  UNIQUE KEY `roles_slug_unique` (`slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `permissions` (
+  `permission_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `slug` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `module` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `module_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `action` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `locked` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`permission_id`),
+  UNIQUE KEY `permissions_slug_unique` (`slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `permission_role` (
+  `rol_id` bigint NOT NULL,
+  `permission_id` bigint unsigned NOT NULL,
+  PRIMARY KEY (`rol_id`,`permission_id`),
+  CONSTRAINT `permission_role_rol_id_foreign` FOREIGN KEY (`rol_id`) REFERENCES `roles` (`rol_id`) ON DELETE CASCADE,
+  CONSTRAINT `permission_role_permission_id_foreign` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`permission_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `rotulos_unidosis` (
@@ -627,8 +655,25 @@ CREATE TABLE `solicitud_reposicion_detalle` (
   CONSTRAINT `solicitud_reposicion_detalle_chk_1` CHECK ((`cantidad_solicitada` > 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `solicitudes_ajuste_grupos` (
+  `grupo_ajuste_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `estado` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDIENTE',
+  `usuario_solicita_rut` varchar(12) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `solicitante_es_qf` tinyint(1) NOT NULL DEFAULT '0',
+  `usuario_autoriza_rut` varchar(12) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `motivo_resolucion` text COLLATE utf8mb4_unicode_ci,
+  `fecha_solicitud` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `fecha_resolucion` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`grupo_ajuste_id`),
+  KEY `solicitudes_ajuste_grupos_estado_fecha_idx` (`estado`,`fecha_solicitud`),
+  KEY `solicitudes_ajuste_grupos_solicitante_fecha_idx` (`usuario_solicita_rut`,`fecha_solicitud`),
+  CONSTRAINT `solicitudes_ajuste_grupos_autorizador_fk` FOREIGN KEY (`usuario_autoriza_rut`) REFERENCES `usuarios` (`rut`),
+  CONSTRAINT `solicitudes_ajuste_grupos_solicitante_fk` FOREIGN KEY (`usuario_solicita_rut`) REFERENCES `usuarios` (`rut`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE `solicitudes_ajuste_inventario` (
   `solicitud_ajuste_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `grupo_ajuste_id` bigint unsigned DEFAULT NULL,
   `lote_id` bigint NOT NULL,
   `ubicacion_id` bigint NOT NULL,
   `tipo_ajuste` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -644,12 +689,14 @@ CREATE TABLE `solicitudes_ajuste_inventario` (
   `fecha_resolucion` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`solicitud_ajuste_id`),
   KEY `solicitudes_ajuste_estado_fecha_idx` (`estado`,`fecha_solicitud`),
+  KEY `solicitudes_ajuste_grupo_idx` (`grupo_ajuste_id`),
   KEY `solicitudes_ajuste_solicitante_fecha_idx` (`usuario_solicita_rut`,`fecha_solicitud`),
   KEY `solicitudes_ajuste_lote_fk` (`lote_id`),
   KEY `solicitudes_ajuste_ubicacion_fk` (`ubicacion_id`),
   KEY `solicitudes_ajuste_autorizador_fk` (`usuario_autoriza_rut`),
   KEY `solicitudes_ajuste_movimiento_fk` (`movimiento_id`),
   CONSTRAINT `solicitudes_ajuste_autorizador_fk` FOREIGN KEY (`usuario_autoriza_rut`) REFERENCES `usuarios` (`rut`),
+  CONSTRAINT `solicitudes_ajuste_grupo_fk` FOREIGN KEY (`grupo_ajuste_id`) REFERENCES `solicitudes_ajuste_grupos` (`grupo_ajuste_id`),
   CONSTRAINT `solicitudes_ajuste_lote_fk` FOREIGN KEY (`lote_id`) REFERENCES `lotes` (`lote_id`),
   CONSTRAINT `solicitudes_ajuste_movimiento_fk` FOREIGN KEY (`movimiento_id`) REFERENCES `movimientos_inventario` (`movimiento_id`),
   CONSTRAINT `solicitudes_ajuste_solicitante_fk` FOREIGN KEY (`usuario_solicita_rut`) REFERENCES `usuarios` (`rut`),

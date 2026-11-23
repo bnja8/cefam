@@ -17,10 +17,10 @@ class PrescriptionQueryService
                 ->where('rut', old('paciente_rut'))
                 ->where('activo', true)
                 ->first(['rut', PersonName::expression('pacientes', 'nombre_completo')]),
-            'professionals' => DB::table('profesionales_salud')
+            'professionals' => DB::table('personal_salud')
                 ->when($activeProfessionals, fn ($query) => $query->where('activo', true))
                 ->orderBy('apellidoPaterno')->orderBy('apellidoMaterno')->orderBy('nombre')
-                ->get(['rut', PersonName::expression('profesionales_salud', 'nombre_completo'), 'tipo_profesional']),
+                ->get(['rut', PersonName::expression('personal_salud', 'nombre_completo'), 'tipo_profesional']),
         ];
     }
 
@@ -28,10 +28,10 @@ class PrescriptionQueryService
     {
         $prescriptions = DB::table('recetas')
             ->join('pacientes', 'pacientes.rut', '=', 'recetas.paciente_rut')
-            ->join('profesionales_salud', 'profesionales_salud.rut', '=', 'recetas.profesional_rut')
+            ->join('personal_salud', 'personal_salud.rut', '=', 'recetas.profesional_rut')
             ->where('recetas.estado_ficha', 'RECIENTE')
             ->where('recetas.fecha_registro', '>', now()->subDays(30))
-            ->select('recetas.*', 'pacientes.rut', PersonName::expression('pacientes', 'paciente'), PersonName::expression('profesionales_salud', 'profesional'))
+            ->select('recetas.*', 'pacientes.rut', PersonName::expression('pacientes', 'paciente'), PersonName::expression('personal_salud', 'profesional'))
             ->when($filters['estado'] ?? null, fn ($query, string $status) => $query->where('recetas.estado', $status))
             ->when($filters['tipo_receta'] ?? null, fn ($query, string $type) => $query->where('recetas.tipo_receta', $type))
             ->when($filters['buscar'] ?? null, function ($query, string $search) {
@@ -41,7 +41,7 @@ class PrescriptionQueryService
                         ->orWhere('recetas.estado', 'like', $term)
                         ->orWhere('pacientes.rut', 'like', '%'.Rut::limpiarRut($search).'%')
                         ->orWhere(fn ($nameQuery) => PersonName::whereMatches($nameQuery, 'pacientes', $search))
-                        ->orWhere(fn ($nameQuery) => PersonName::whereMatches($nameQuery, 'profesionales_salud', $search));
+                        ->orWhere(fn ($nameQuery) => PersonName::whereMatches($nameQuery, 'personal_salud', $search));
                 });
             })
             ->orderByDesc('recetas.fecha_emision')
@@ -120,13 +120,13 @@ class PrescriptionQueryService
     {
         $prescription = DB::table('recetas')
             ->join('pacientes', 'pacientes.rut', '=', 'recetas.paciente_rut')
-            ->join('profesionales_salud', 'profesionales_salud.rut', '=', 'recetas.profesional_rut')
+            ->join('personal_salud', 'personal_salud.rut', '=', 'recetas.profesional_rut')
             ->where('recetas.receta_id', $prescriptionId)
             ->first([
                 'recetas.*',
                 'pacientes.rut as paciente_rut',
                 PersonName::expression('pacientes', 'paciente'),
-                PersonName::expression('profesionales_salud', 'profesional'),
+                PersonName::expression('personal_salud', 'profesional'),
             ]);
         abort_unless($prescription, 404);
 

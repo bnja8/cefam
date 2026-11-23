@@ -2,61 +2,34 @@
 @section('content')
     <x-page-header :title="$title" :description="$description">
         <x-slot:actions>
-            @if ($screen === 'kardex')
+            @if ($screen === 'deliveries' && $canExport)
+                <a class="btn btn-primary" href="{{ route('reports.export', request()->only(['desde', 'hasta', 'buscar_entrega']) + ['tipo' => 'entregas']) }}"><i class="fa-solid fa-file-csv"></i> Descargar CSV</a>
+            @elseif ($screen === 'kardex' && $canExport)
                 <a class="btn btn-primary" href="{{ route('reports.export', request()->only(['desde', 'hasta', 'buscar_kardex']) + ['tipo' => 'kardex']) }}"><i class="fa-solid fa-file-csv"></i> Imprimir CSV</a>
-            @elseif ($screen !== 'controlled')
+            @elseif ($screen !== 'controlled' && $screen !== 'deliveries')
                 <button class="btn btn-outline" type="button" data-page-print><i class="fa-solid fa-print"></i> Imprimir / PDF</button>
             @endif
-            @if ($screen === 'controlled')
+            @if ($screen === 'controlled' && $canExport)
                 <a class="btn btn-primary" href="{{ route('reports.export', request()->only(['desde', 'hasta']) + ['tipo' => 'controlados']) }}"><i class="fa-solid fa-file-excel"></i> Exportar a Excel (CSV)</a>
             @endif
-            @if ($screen === 'summary' || $screen === 'movements')
+            @if ($screen === 'movements' && $canExport)
                 <a class="btn btn-primary" href="{{ route('reports.export', request()->only(['desde', 'hasta']) + ['tipo' => 'movimientos']) }}"><i class="fa-solid fa-file-excel"></i> Exportar movimientos (CSV)</a>
-            @endif
-            @if ($screen === 'summary')
-                <a class="btn btn-outline" href="{{ route('reports.kardex') }}"><i class="fa-solid fa-box-archive"></i> Ver Kardex histórico</a>
             @endif
         </x-slot:actions>
     </x-page-header>
 
-    @if ($screen === 'summary')
-    <div class="metrics-grid metrics-grid-compact report-summary">
-        <x-metric-card label="Entregas en el período" :value="number_format($deliveryCount, 0, ',', '.')" icon="fa-prescription-bottle-medical" tone="blue" />
-        <x-metric-card label="Líneas de movimientos" :value="number_format($movementCount, 0, ',', '.')" icon="fa-arrow-right-arrow-left" tone="green" />
-        <x-metric-card label="Existencias bajo mínimo" :value="number_format($lowStockCount, 0, ',', '.')" icon="fa-triangle-exclamation" tone="red" />
-        <x-metric-card label="Stock vigente total" :value="\App\Support\Formatting\NumberFormat::format($availableStock)" icon="fa-boxes-stacked" tone="green" />
-        <x-metric-card label="Lotes vencidos con stock" :value="number_format($expiredLotCount, 0, ',', '.')" icon="fa-calendar-xmark" tone="red" />
-        <x-metric-card label="Movimientos controlados" :value="number_format($controlledMovementCount, 0, ',', '.')" icon="fa-shield-halved" tone="violet" />
-    </div>
-
-    <div class="notice notice-info"><i class="fa-solid fa-circle-info"></i><span>El período filtra entregas y movimientos históricos. Las existencias, stock bajo mínimo y lotes vencidos muestran el estado actual del inventario.</span></div>
-    @endif
-
-    @if ($screen !== 'stock')
+    @if ($screen === 'controlled' || $screen === 'kardex')
     <section class="card report-filters" id="filtro-reportes">
         <div class="card-header"><h2 class="card-title"><i class="fa-solid fa-filter text-primary"></i> Filtrar período</h2></div>
         <div class="card-body">
-            <form action="{{ request()->url() }}" method="get" class="form-grid">
-                <div class="form-group"><label for="desde">Desde</label><input class="form-control" id="desde" name="desde" type="date" value="{{ $filters['desde'] ?? '' }}"></div>
-                <div class="form-group"><label for="hasta">Hasta</label><input class="form-control" id="hasta" name="hasta" type="date" value="{{ $filters['hasta'] ?? '' }}"></div>
+            <form action="{{ request()->url() }}" method="get" class="form-grid {{ $screen === 'kardex' ? 'report-kardex-filters' : '' }}">
                 @if ($screen === 'kardex')
                     <div class="form-group"><label for="buscar-kardex">Buscar Kardex</label><input class="form-control" id="buscar-kardex" name="buscar_kardex" value="{{ $kardexFilters['buscar_kardex'] ?? '' }}" placeholder="Producto, lote, ubicación o documento"></div>
                 @endif
+                <div class="form-group"><label for="desde">Desde</label><input class="form-control" id="desde" name="desde" type="date" value="{{ $filters['desde'] ?? '' }}"></div>
+                <div class="form-group"><label for="hasta">Hasta</label><input class="form-control" id="hasta" name="hasta" type="date" value="{{ $filters['hasta'] ?? '' }}"></div>
                 <div class="form-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Aplicar filtro</button></div>
             </form>
-        </div>
-    </section>
-    @endif
-
-    @if ($screen === 'summary')
-    <section class="card report-summary" id="exportar-reportes">
-        <div class="card-header"><h2 class="card-title"><i class="fa-solid fa-file-export text-primary"></i> Exportar reportes</h2><span class="muted">Archivos CSV compatibles con Excel</span></div>
-        <div class="card-body report-export-links">
-            <a class="btn btn-outline" href="{{ route('reports.export', request()->only(['desde', 'hasta']) + ['tipo' => 'movimientos']) }}"><i class="fa-solid fa-arrow-right-arrow-left"></i> Movimientos</a>
-            <a class="btn btn-outline" href="{{ route('reports.export', request()->only(['desde', 'hasta']) + ['tipo' => 'entregas']) }}"><i class="fa-solid fa-prescription-bottle-medical"></i> Entregas</a>
-            <a class="btn btn-outline" href="{{ route('reports.export', ['tipo' => 'existencias']) }}"><i class="fa-solid fa-boxes-stacked"></i> Existencias actuales</a>
-            <a class="btn btn-outline" href="{{ route('reports.export', ['tipo' => 'vencimientos']) }}"><i class="fa-solid fa-calendar-xmark"></i> Vencidos y próximos (30 días)</a>
-            <a class="btn btn-outline" href="{{ route('reports.export', request()->only(['desde', 'hasta']) + ['tipo' => 'controlados']) }}"><i class="fa-solid fa-shield-halved"></i> Medicamentos controlados</a>
         </div>
     </section>
     @endif
@@ -101,12 +74,20 @@
 
     @if ($screen === 'deliveries')
     <section class="card report-table" id="entregas-dispensaciones">
-        <div class="card-header"><h2 class="card-title"><i class="fa-solid fa-prescription-bottle-medical text-primary"></i> Dispensaciones y entregas</h2><span class="muted">{{ number_format($deliveries->total(), 0, ',', '.') }} líneas confirmadas en el período · datos de pacientes</span></div>
+        <div class="card-header">
+            <h2 class="card-title"><i class="fa-solid fa-prescription-bottle-medical text-primary"></i> Dispensaciones y entregas</h2>
+            <span class="muted">
+                {{ number_format($deliveries->total(), 0, ',', '.') }} líneas confirmadas
+                @if (($filters['desde'] ?? null) || ($filters['hasta'] ?? null)) en el período seleccionado @endif
+                · datos de pacientes
+            </span>
+        </div>
         <div class="card-body">
-            <form action="{{ request()->url() }}" method="get" class="form-grid">
-                <input type="hidden" name="desde" value="{{ $filters['desde'] ?? '' }}"><input type="hidden" name="hasta" value="{{ $filters['hasta'] ?? '' }}">
+            <form action="{{ request()->url() }}" method="get" class="form-grid report-delivery-filters">
                 <div class="form-group"><label for="buscar-entrega">Buscar entrega</label><input class="form-control" id="buscar-entrega" name="buscar_entrega" value="{{ $deliveryFilters['buscar_entrega'] ?? '' }}" placeholder="Paciente, folio, producto o lote"></div>
-                <div class="form-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button><a class="btn btn-outline" href="{{ request()->url() }}">Limpiar</a></div>
+                <div class="form-group"><label for="desde">Desde</label><input class="form-control" id="desde" name="desde" type="date" value="{{ $filters['desde'] ?? '' }}"></div>
+                <div class="form-group"><label for="hasta">Hasta</label><input class="form-control" id="hasta" name="hasta" type="date" value="{{ $filters['hasta'] ?? '' }}"></div>
+                <div class="form-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Aplicar filtro</button><a class="btn btn-outline" href="{{ request()->url() }}">Limpiar</a></div>
             </form>
         </div>
         <div class="table-responsive"><table class="data-table"><thead><tr><th>FECHA / HORA</th><th>FOLIO</th><th>PACIENTE</th><th>PRODUCTO</th><th>CÓDIGO</th><th>LOTE</th><th>CANTIDAD</th><th>RESPONSABLE</th></tr></thead><tbody>
@@ -119,7 +100,7 @@
     @endif
 
     @if ($screen === 'stock')
-    <section class="card report-summary" id="stock-por-categoria">
+    <section class="card" id="stock-por-categoria">
         <div class="card-header"><h2 class="card-title"><i class="fa-solid fa-chart-pie text-primary"></i> Productos con existencias por categoría</h2><span class="muted">{{ number_format($stockByCategory->total(), 0, ',', '.') }} categorías</span></div>
         <div class="card-body">
             <form action="{{ request()->url() }}" method="get" class="form-grid">
@@ -141,11 +122,11 @@
     <section class="card report-table" id="movimientos-inventario">
         <div class="card-header"><h2 class="card-title"><i class="fa-solid fa-clock-rotate-left text-primary"></i> Movimientos de inventario</h2><span class="muted">{{ number_format($movements->total(), 0, ',', '.') }} resultados · CSV disponible para el período completo</span></div>
         <div class="card-body">
-            <form action="{{ request()->url() }}" method="get" class="form-grid">
-                <input type="hidden" name="desde" value="{{ $filters['desde'] ?? '' }}">
-                <input type="hidden" name="hasta" value="{{ $filters['hasta'] ?? '' }}">
+            <form action="{{ request()->url() }}" method="get" class="form-grid report-movement-filters">
                 <div class="form-group"><label for="buscar-movimiento">Buscar movimiento</label><input class="form-control" id="buscar-movimiento" name="buscar_movimiento" value="{{ $movementFilters['buscar_movimiento'] ?? '' }}" placeholder="Producto, código, lote, ubicación o responsable"></div>
                 <div class="form-group"><label for="tipo-movimiento">Tipo de movimiento</label><select class="form-control" id="tipo-movimiento" name="tipo_movimiento"><option value="">Todos</option>@foreach (['RECEPCION' => 'Recepción', 'SALIDA' => 'Salida', 'TRASPASO_ENTRADA' => 'Traspaso de entrada', 'TRASPASO_SALIDA' => 'Traspaso de salida', 'AJUSTE_ENTRADA' => 'Ajuste de entrada', 'AJUSTE_SALIDA' => 'Ajuste de salida'] as $value => $label)<option value="{{ $value }}" @selected(($movementFilters['tipo_movimiento'] ?? null) === $value)>{{ $label }}</option>@endforeach</select></div>
+                <div class="form-group"><label for="desde">Desde</label><input class="form-control" id="desde" name="desde" type="date" value="{{ $filters['desde'] ?? '' }}"></div>
+                <div class="form-group"><label for="hasta">Hasta</label><input class="form-control" id="hasta" name="hasta" type="date" value="{{ $filters['hasta'] ?? '' }}"></div>
                 <div class="form-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button><a class="btn btn-outline" href="{{ request()->url() }}">Limpiar</a></div>
             </form>
         </div>

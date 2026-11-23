@@ -1,3 +1,4 @@
+import '@fontsource-variable/inter';
 import './bootstrap';
 import { initializeScrollableTables } from './modules/accessibility';
 import { initializeBarcodeLookup, initializeBarcodeScanner } from './modules/barcode-lookup';
@@ -16,8 +17,12 @@ import { initializePersonLookup } from './modules/person-lookup';
 import { initializeDeliveryOrderPrint } from './modules/delivery-order-print';
 import { initializeChileanMobileInputs } from './modules/phone-input';
 import { initializeDateInputs } from './modules/date-inputs';
+import { initializeLiveRecordSearch } from './modules/live-record-search';
+import { initializePermissionEditor } from './modules/permission-editor';
 
 initializeDateInputs();
+initializeLiveRecordSearch();
+initializePermissionEditor();
 initializeModuleSections();
 initializeRutValidation();
 initializePersonLookup();

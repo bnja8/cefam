@@ -1,6 +1,7 @@
 
 @media (max-width: 1120px) {
     .inventory-metrics-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .dashboard-metrics-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .dashboard-analytics-grid { grid-template-columns: minmax(0,1.35fr) minmax(260px,.9fr); }
     .dashboard-secondary-charts { grid-template-columns: 1fr; }
     .patient-filter-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
@@ -32,6 +33,7 @@
 @media (max-width: 760px) {
     .topbar { padding: 0 12px; }
     .content-body { padding: 18px 12px; }
+    .dashboard-metrics-grid { grid-template-columns: minmax(0,1fr); }
     .dashboard-analytics-grid, .dashboard-secondary-charts { grid-template-columns: minmax(0,1fr); }
     .quick-actions-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .page-header { align-items: flex-start; }
@@ -50,8 +52,8 @@
     .form-actions > .btn { flex: 1 1 145px; }
     .card-body { padding: 17px; }
     .card-header { padding: 16px 17px; }
-    .btn { min-height: 42px; }
-    .btn-small { min-height: 38px; }
+    .btn { min-height: 44px; }
+    .btn-small { min-height: 40px; }
     .sidebar-toggle-btn, .icon-btn { min-width: 40px; min-height: 40px; }
     .prescription-treatment-header { align-items: flex-start; flex-wrap: wrap; }
     .prescription-treatment-toggle { width: 100%; margin-left: 50px; white-space: normal; }

@@ -12,10 +12,11 @@
                 <div class="form-group"><label for="apellidoMaterno">Apellido materno *</label><input class="form-control" id="apellidoMaterno" name="apellidoMaterno" value="{{ old('apellidoMaterno', $user->apellidoMaterno) }}" required maxlength="50"></div>
                 <x-phone-input id="telefono" :value="$user->telefono" />
                 @if ($user->rut !== auth()->id())
-                    <div class="form-group"><label for="rol_id">Rol *</label><select class="form-control" id="rol_id" name="rol_id" required>@foreach ($roles as $role)<option value="{{ $role->rol_id }}" @selected(old('rol_id', $user->rol_id) == $role->rol_id)>{{ $role->nombre }}</option>@endforeach</select></div>
+                    <div class="form-group"><label for="rol_id">Rol *</label><select class="form-control" id="rol_id" name="rol_id" required>@foreach ($roles as $role)<option value="{{ $role->rol_id }}" @selected(old('rol_id', $user->rol_id) == $role->rol_id)>{{ $role->nombre }}{{ ! $role->activo ? ' (desactivado)' : '' }}</option>@endforeach</select></div>
                 @else
                     <div class="form-group"><label>Rol</label><p class="form-control">{{ $roles->firstWhere('rol_id', $user->rol_id)?->nombre ?? 'Administrador' }} (no modificable en la propia cuenta)</p></div>
                 @endif
+                <div class="form-group"><label for="personal_rut">Personal de salud vinculado (opcional)</label><select class="form-control" id="personal_rut" name="personal_rut"><option value="">Sin vínculo</option>@foreach ($personal as $member)<option value="{{ $member->rut }}" @selected(old('personal_rut', $user->personal_rut) === $member->rut)>{{ $member->nombre_completo }} - {{ $member->rut }}</option>@endforeach</select></div>
                 <div class="form-group form-span"><label for="password">Nueva contraseña (opcional, mínimo 12 caracteres)</label><input class="form-control" id="password" type="password" name="password" minlength="12" autocomplete="new-password"></div>
                 <div class="form-actions"><button class="btn btn-primary" type="submit">Guardar cambios</button><a class="btn btn-outline" href="{{ route('users.index') }}">Cancelar</a></div>
             </form>

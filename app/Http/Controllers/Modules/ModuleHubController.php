@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Modules;
 
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
+use App\Support\Authorization\PermissionCatalog;
 use Illuminate\Support\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +24,7 @@ class ModuleHubController extends Controller
         'dispensaciones' => ['dispensations.*', 'delivery-orders.*'],
         'reportes' => ['reports.*'],
         'libro-digital' => ['controlled-ledger.*'],
-        'administracion' => ['modules.show', 'users.*'],
+        'administracion' => ['modules.show', 'users.*', 'roles.*', 'permissions.*'],
         'alertas' => ['alerts.*'],
     ];
 
@@ -130,13 +131,11 @@ class ModuleHubController extends Controller
             'icon' => 'fa-chart-line',
             'roles' => ['Administrador', 'Químico Farmacéutico'],
             'cards' => [
-                ['title' => 'Resumen del período', 'description' => 'Consulta indicadores agregados del sistema.', 'icon' => 'fa-filter', 'route' => 'reports.index', 'tone' => 'blue'],
                 ['title' => 'Entregas y dispensaciones', 'description' => 'Consulta las entregas registradas.', 'icon' => 'fa-prescription-bottle-medical', 'route' => 'reports.deliveries', 'tone' => 'teal'],
                 ['title' => 'Existencias por categoría', 'description' => 'Consulta el stock agrupado por categoría.', 'icon' => 'fa-chart-pie', 'route' => 'reports.stock', 'tone' => 'violet'],
                 ['title' => 'Movimientos de inventario', 'description' => 'Revisa el detalle de movimientos registrados.', 'icon' => 'fa-clock-rotate-left', 'route' => 'reports.movements', 'tone' => 'amber'],
                 ['title' => 'Kardex de inventario histórico', 'description' => 'Consulta lotes agotados al dispensar o reponer existencias en la ubicación.', 'icon' => 'fa-box-archive', 'route' => 'reports.kardex', 'tone' => 'teal'],
                 ['title' => 'Movimientos controlados', 'description' => 'Consulta el libro de medicamentos controlados.', 'icon' => 'fa-shield-halved', 'route' => 'reports.controlled', 'tone' => 'red'],
-                ['title' => 'Exportar movimientos', 'description' => 'Descarga los movimientos en formato CSV.', 'icon' => 'fa-file-csv', 'route' => 'reports.export', 'tone' => 'green'],
             ],
         ],
         'libro-digital' => [
@@ -158,6 +157,7 @@ class ModuleHubController extends Controller
             'cards' => [
                 ['title' => 'Consultar usuarios', 'description' => 'Revisa cuentas y estados de acceso.', 'icon' => 'fa-users', 'route' => 'users.index', 'tone' => 'blue'],
                 ['title' => 'Crear cuenta', 'description' => 'Registra una nueva cuenta de usuario.', 'icon' => 'fa-user-plus', 'route' => 'users.create', 'tone' => 'green', 'roles' => ['Administrador']],
+                ['title' => 'Roles y permisos', 'description' => 'Configura los permisos y módulos disponibles para cada rol.', 'icon' => 'fa-shield-halved', 'route' => 'permissions.index', 'tone' => 'violet'],
             ],
         ],
         'alertas' => [
@@ -175,11 +175,10 @@ class ModuleHubController extends Controller
     {
         abort_unless(isset(self::MODULES[$module]), 404);
         $configuration = self::MODULES[$module];
-        $roles = $configuration['roles'] ?? [];
         $user = Auth::user();
-        abort_if($roles !== [] && (! $user instanceof Usuario || ! $user->hasAnyRole($roles)), 403);
+        abort_unless($user instanceof Usuario, 401);
 
-        $card = $this->visibleCards($configuration, $user)->first();
+        $card = $this->visibleCards($configuration, $user, $user->effectivePermissions())->first();
         abort_unless($card !== null, 403);
 
         return redirect()->to($card['url']);
@@ -187,22 +186,168 @@ class ModuleHubController extends Controller
 
     public function navigationFor(Usuario $user): array
     {
-        return collect(self::MODULES)
-            ->filter(static fn (array $module): bool => ! isset($module['roles']) || $user->hasAnyRole($module['roles']))
-            ->map(function (array $module, string $slug) use ($user): array {
-                $module['items'] = $this->visibleCards($module, $user)->all();
+        $grantedPermissions = $user->effectivePermissions();
+        $modules = collect(self::MODULES)
+            ->map(function (array $module, string $slug) use ($user, $grantedPermissions): array {
+                $module['items'] = $this->visibleCards($module, $user, $grantedPermissions)->all();
                 $module['active_routes'] = self::ACTIVE_ROUTE_PATTERNS[$slug] ?? [];
 
                 return $module;
             })
-            ->filter(static fn (array $module): bool => $module['items'] !== [])
             ->all();
+
+        $items = static function (string $module, array $routes) use ($modules): array {
+            $availableItems = collect($modules[$module]['items']);
+
+            return collect($routes)
+                ->map(static fn (string $route) => $availableItems->firstWhere('route', $route))
+                ->filter()
+                ->values()
+                ->all();
+        };
+
+        $group = static fn (
+            string $key,
+            string $title,
+            array $groupItems,
+            array $activeRoutes,
+            array $subsections = []
+        ): array => [
+            'key' => $key,
+            'title' => $title,
+            'items' => $groupItems,
+            'subsections' => $subsections,
+            'active_routes' => $activeRoutes,
+        ];
+
+        $authorizedPeopleItems = $items('personas-autorizadas', [
+            'authorized-people.index',
+            'authorized-people.create',
+        ]);
+        $cartStockItems = $items('carros', ['carts.index']);
+        if ($cartStockItems !== []) {
+            $cartStockItems[0]['title'] = 'Consultar existencias de Carro de Paro y Unidosis';
+        }
+
+        $groups = [
+            $group('dispensaciones', $modules['dispensaciones']['title'], $items('dispensaciones', [
+                'dispensations.index',
+                'dispensations.deliveries',
+            ]), self::ACTIVE_ROUTE_PATTERNS['dispensaciones']),
+            $group('recetas', $modules['recetas']['title'], $items('recetas', [
+                'recipes.index',
+                'recipes.create',
+            ]), self::ACTIVE_ROUTE_PATTERNS['recetas']),
+            $group('carro-paro', 'Carro de Paro', $items('carros', [
+                'carts.usage.index',
+                'carts.paro.create',
+            ]), ['carts.usage.*', 'carts.paro.*']),
+            $group('unidosis', 'Unidosis', $items('carros', [
+                'carts.unidosis.create',
+                'carts.unidosis.index',
+            ]), ['carts.unidosis.*']),
+            $group('pacientes', $modules['pacientes']['title'], array_merge(
+                $items('pacientes', ['patients.index', 'patients.create']),
+                $items('carros', ['carts.treatments.create']),
+                $items('programas', ['programs.affiliations.index'])
+            ), ['patients.*', 'authorized-people.*', 'carts.treatments.*'], $authorizedPeopleItems === [] ? [] : [[
+                'key' => 'personas-autorizadas',
+                'title' => 'Personas autorizadas',
+                'items' => $authorizedPeopleItems,
+            ]]),
+            $group('programas', $modules['programas']['title'], $items('programas', [
+                'programs.index',
+                'programs.affiliations.index',
+                'programs.enroll.create',
+                'programs.create',
+            ]), self::ACTIVE_ROUTE_PATTERNS['programas']),
+            $group('inventario', $modules['inventario']['title'], array_merge(
+                $cartStockItems,
+                $items('inventario', [
+                    'inventory.index',
+                    'inventory.catalog',
+                    'categories.index',
+                    'locations.index',
+                    'categories.create',
+                    'products.create',
+                    'inventory.transfer.form',
+                ])
+            ), ['inventory.index', 'inventory.catalog', 'inventory.transfer.*', 'categories.*', 'locations.*', 'products.*', 'carts.index']),
+            $group('remesas', 'Abastecimiento y Ajustes Farmacéuticos', array_merge(
+                $items('inventario', ['inventory.adjustments.index']),
+                $items('remesas', [
+                    'supplies.requests.index',
+                    'supplies.requests.create',
+                    'supplies.receive.form',
+                    'supplies.index',
+                ])
+            ), ['supplies.*', 'inventory.adjustments.*', 'inventory.adjust.form']),
+            $group('libro-digital', $modules['libro-digital']['title'], $items('libro-digital', [
+                'controlled-ledger.index',
+                'controlled-ledger.create',
+                'controlled-ledger.reconcile.form',
+            ]), self::ACTIVE_ROUTE_PATTERNS['libro-digital']),
+            $group('personal', $modules['personal']['title'], $items('personal', [
+                'professionals.index',
+                'professionals.create',
+            ]), self::ACTIVE_ROUTE_PATTERNS['personal']),
+            $group('administracion', $modules['administracion']['title'], $items('administracion', [
+                'users.index',
+                'users.create',
+                'permissions.index',
+            ]), self::ACTIVE_ROUTE_PATTERNS['administracion']),
+            $group('reportes', $modules['reportes']['title'], $items('reportes', [
+                'reports.deliveries',
+                'reports.stock',
+                'reports.movements',
+                'reports.kardex',
+                'reports.controlled',
+            ]), self::ACTIVE_ROUTE_PATTERNS['reportes']),
+        ];
+
+        return [
+            'principal_items' => $items('alertas', ['alerts.map', 'alerts.history']),
+            'groups' => collect($groups)
+                ->filter(static fn (array $module): bool => $module['items'] !== []
+                    || collect($module['subsections'])->contains(static fn (array $section): bool => $section['items'] !== []))
+                ->values()
+                ->all(),
+        ];
     }
 
-    private function visibleCards(array $configuration, ?Usuario $user): Collection
+    private function visibleCards(
+        array $configuration,
+        ?Usuario $user,
+        array $grantedPermissions
+    ): Collection
     {
         return collect($configuration['cards'])
-            ->filter(static fn (array $card): bool => ! isset($card['roles']) || ($user instanceof Usuario && $user->hasAnyRole($card['roles'])))
+            ->filter(function (array $card) use ($user, $grantedPermissions): bool {
+                if (! $user instanceof Usuario) {
+                    return false;
+                }
+
+                $permissions = PermissionCatalog::permissionsForRoute($card['route']);
+                if ($card['route'] === 'inventory.adjustments.index'
+                    && array_intersect(['inventory.adjust.request', 'inventory.adjust.resolve'], $grantedPermissions) === []) {
+                    return false;
+                }
+                if ($card['route'] === 'alerts.history'
+                    && ! in_array('alerts.manage', $grantedPermissions, true)) {
+                    return false;
+                }
+                if ($permissions === []) {
+                    return false;
+                }
+
+                foreach ($permissions as $permission) {
+                    if (! in_array($permission, $grantedPermissions, true)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
             ->map(static function (array $card): array {
                 $card['url'] = route($card['route'], $card['params'] ?? []);
 

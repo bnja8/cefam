@@ -18,7 +18,7 @@ class ProductController extends Controller
 {
     public function index(Request $request, AuditLogger $audit, ProductCatalogService $catalog): View|JsonResponse
     {
-        $this->authorizeAdministrator($audit, 'productos');
+        $this->authorizePermission('inventory.products.view', $audit, 'productos');
         $user = Auth::user();
         $products = $catalog->catalogPage()->withQueryString();
 
@@ -29,15 +29,16 @@ class ProductController extends Controller
         return view('inventory.index', [
             'screen' => 'catalog',
             'catalogProducts' => $products,
-            'canManageCatalog' => true,
+            'canViewCatalog' => $user instanceof Usuario && $user->hasPermission('inventory.products.view'),
+            'canManageCatalog' => $user instanceof Usuario && $user->hasPermission('inventory.products.manage'),
             'canManageCategories' => $user instanceof Usuario
-                && $user->hasAnyRole(['Administrador', 'Químico Farmacéutico']),
+                && $user->hasPermission('inventory.catalog.manage'),
         ]);
     }
 
     public function create(Request $request, AuditLogger $audit, ProductCatalogService $catalog): View|JsonResponse
     {
-        $this->authorizeAdministrator($audit, 'productos');
+        $this->authorizePermission('inventory.products.manage', $audit, 'productos');
         $user = Auth::user();
         $options = [
             'categorias' => DB::table('categorias_producto')->orderBy('nombre')->get(['categoria_id', 'nombre']),
@@ -54,9 +55,9 @@ class ProductController extends Controller
             'screen' => 'product-create',
             'categories' => $options['categorias'],
             'presentations' => $options['presentaciones'],
-            'canManageCatalog' => true,
+            'canManageCatalog' => $user instanceof Usuario && $user->hasPermission('inventory.products.manage'),
             'canManageCategories' => $user instanceof Usuario
-                && $user->hasAnyRole(['Administrador', 'Químico Farmacéutico']),
+                && $user->hasPermission('inventory.catalog.manage'),
             ...[
                 'dosageForms' => $options['dosageForms'],
                 'measurementUnits' => $options['measurementUnits'],
@@ -78,7 +79,7 @@ class ProductController extends Controller
 
     public function edit(Request $request, int $productId, AuditLogger $audit, ProductCatalogService $catalog): View|JsonResponse
     {
-        $this->authorizeAdministrator($audit, 'productos', $productId);
+        $this->authorizePermission('inventory.products.manage', $audit, 'productos', $productId);
         $data = $catalog->editData($productId);
 
         if ($request->expectsJson()) {

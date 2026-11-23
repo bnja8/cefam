@@ -27,7 +27,7 @@ class HealthProgramController extends Controller
         /** @var Usuario $user */
         $screen = $request->route('screen', 'programs');
         if (in_array($screen, ['create', 'edit'], true)) {
-            abort_unless($user->hasAnyRole(['Administrador', 'Químico Farmacéutico']), 403);
+            abort_unless($user->hasPermission('programs.manage'), 403);
 
             $program = $screen === 'edit'
                 ? DB::table('programas_salud')->where('programa_id', $request->route('programId'))->first() ?? abort(404)
@@ -128,7 +128,8 @@ class HealthProgramController extends Controller
             'enrollments' => $enrollments,
             'programFilters' => $programFilters,
             'enrollmentFilters' => $enrollmentFilters,
-            'canCreateProgram' => $user->hasAnyRole(['Administrador', 'Químico Farmacéutico']),
+            'canEnroll' => $user->hasPermission('programs.enroll'),
+            'canCreateProgram' => $user->hasPermission('programs.manage'),
             'activeProgramCount' => $screen === 'programs' ? DB::table('programas_salud')->where('activo', true)->count() : 0,
             'activeEnrollmentCount' => $screen === 'programs' ? $queries->activeEnrollmentCount($today) : 0,
             'allPrograms' => $allPrograms,
@@ -142,7 +143,7 @@ class HealthProgramController extends Controller
     public function store(Request $request, AuditLogger $audit): RedirectResponse|JsonResponse
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
+        if (! $user instanceof Usuario || ! $user->hasPermission('programs.manage')) {
             $audit->record('ACCESO_DENEGADO', 'programas_salud', null, 'RECHAZADO');
             abort(403);
         }
@@ -168,7 +169,7 @@ class HealthProgramController extends Controller
     public function show(int $programId, Request $request, AuditLogger $audit): JsonResponse
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
+        if (! $user instanceof Usuario || ! $user->hasPermission('programs.manage')) {
             $audit->record('ACCESO_DENEGADO', 'programas_salud', $programId, 'RECHAZADO');
             abort(403);
         }
@@ -184,7 +185,7 @@ class HealthProgramController extends Controller
     public function update(Request $request, int $programId, AuditLogger $audit): RedirectResponse|JsonResponse
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
+        if (! $user instanceof Usuario || ! $user->hasPermission('programs.manage')) {
             $audit->record('ACCESO_DENEGADO', 'programas_salud', $programId, 'RECHAZADO');
             abort(403);
         }
@@ -208,7 +209,7 @@ class HealthProgramController extends Controller
     public function toggle(int $programId, AuditLogger $audit, Request $request): RedirectResponse|JsonResponse
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
+        if (! $user instanceof Usuario || ! $user->hasPermission('programs.manage')) {
             $audit->record('ACCESO_DENEGADO', 'programas_salud', $programId, 'RECHAZADO');
             abort(403);
         }

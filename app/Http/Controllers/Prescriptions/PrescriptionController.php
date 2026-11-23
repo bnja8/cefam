@@ -86,7 +86,7 @@ class PrescriptionController extends Controller
                 'required',
                 'string',
                 'max:12',
-                Rule::exists('profesionales_salud', 'rut')->where('activo', true),
+                Rule::exists('personal_salud', 'rut')->where('activo', true),
             ],
             'numero_receta' => ['required', 'string', 'max:100', 'unique:recetas,numero_receta'],
             'fecha_emision' => ['required', 'bail', new FourDigitDate(), 'before_or_equal:today'],
@@ -100,26 +100,12 @@ class PrescriptionController extends Controller
             'detalles.*.producto_id' => ['required', 'integer', 'distinct', 'exists:productos,producto_id,activo,1'],
             'detalles.*.cantidad_indicada' => ['required', 'numeric', 'decimal:0,2', 'gt:0'],
             'detalles.*.unidades_por_toma' => ['required', 'numeric', 'decimal:0,2', 'gt:0'],
-            'detalles.*.duracion_dias' => ['nullable', 'integer', 'min:1', 'max:365'],
-            'detalles.*.es_sos' => ['nullable', 'boolean'],
+            'detalles.*.duracion_dias' => ['required', 'integer', 'min:1', 'max:365'],
+            'detalles.*.es_sos' => ['prohibited'],
             'detalles.*.dosis' => ['nullable', 'string', 'max:100'],
-            'detalles.*.frecuencia' => ['nullable', 'string', 'max:100'],
+            'detalles.*.frecuencia' => ['required', 'string', 'max:100'],
             'detalles.*.indicaciones' => ['nullable', 'string', 'max:1000'],
         ]);
-
-        foreach ($data['detalles'] as $index => $detail) {
-            $isSos = filter_var($detail['es_sos'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            if (! $isSos && empty($detail['duracion_dias'])) {
-                throw ValidationException::withMessages([
-                    "detalles.$index.duracion_dias" => 'Indica la duración del tratamiento o marca que la indicación es SOS.',
-                ]);
-            }
-            if (! $isSos && empty(trim((string) ($detail['frecuencia'] ?? '')))) {
-                throw ValidationException::withMessages([
-                    "detalles.$index.frecuencia" => 'Indica la frecuencia del tratamiento o marca que la indicación es SOS.',
-                ]);
-            }
-        }
 
         $result = DB::transaction(function () use ($data, $audit, $patientFiles) {
             $patientIsActive = DB::table('pacientes')
@@ -131,7 +117,7 @@ class PrescriptionController extends Controller
                 throw ValidationException::withMessages(['paciente_rut' => 'El paciente no está activo.']);
             }
             $fichaId = $patientFiles->ensureForPatient($data['paciente_rut']);
-            $professionalIsActive = DB::table('profesionales_salud')
+            $professionalIsActive = DB::table('personal_salud')
                 ->where('rut', $data['profesional_rut'])
                 ->where('activo', true)
                 ->lockForUpdate()
@@ -174,7 +160,6 @@ class PrescriptionController extends Controller
 
             foreach ($data['detalles'] as $detail) {
                 $product = $products[$detail['producto_id']];
-                $isSos = filter_var($detail['es_sos'] ?? false, FILTER_VALIDATE_BOOLEAN);
                 $dose = $detail['dosis'] ?? null;
                 if (! $dose && isset($detail['unidades_por_toma'])) {
                     $doseAmount = rtrim(rtrim(number_format((float) $detail['unidades_por_toma'], 2, '.', ''), '0'), '.');
@@ -185,11 +170,11 @@ class PrescriptionController extends Controller
                     'producto_id' => $detail['producto_id'],
                     'via_administracion' => $product->via_administracion,
                     'dosis' => $dose,
-                    'frecuencia' => $isSos ? 'SOS' : ($detail['frecuencia'] ?? null),
+                    'frecuencia' => $detail['frecuencia'],
                     'cantidad_indicada' => $detail['cantidad_indicada'],
                     'unidades_por_toma' => $detail['unidades_por_toma'] ?? null,
-                    'duracion_dias' => $isSos ? null : ($detail['duracion_dias'] ?? null),
-                    'es_sos' => $isSos,
+                    'duracion_dias' => $detail['duracion_dias'],
+                    'es_sos' => false,
                     'indicaciones' => $detail['indicaciones'] ?? null,
                 ]);
             }

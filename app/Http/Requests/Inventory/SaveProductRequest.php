@@ -26,7 +26,7 @@ class SaveProductRequest extends InventoryRequest
         'parche transdérmico' => ['unidad'],
     ];
 
-    protected const AUTHORIZED_ROLES = ['Administrador'];
+    protected const AUTHORIZED_PERMISSION = 'inventory.products.manage';
 
     protected const AUDIT_ENTITY = 'productos';
 

@@ -23,6 +23,7 @@ class DeliveryOrderData
                 'ordenes_entrega.plantilla',
                 'entregas.entrega_id',
                 'entregas.receta_id',
+                'entregas.es_sos',
                 'entregas.fecha_hora',
                 'entregas.observacion',
                 'entregas.paciente_nombre_snapshot',
@@ -74,19 +75,24 @@ class DeliveryOrderData
                 'entrega_detalle.unidad_base_codigo_snapshot',
                 'entrega_detalle.numero_lote_snapshot',
                 'entrega_detalle.fecha_vencimiento_lote_snapshot',
+                'entrega_detalle.cantidad_indicada_snapshot',
+                'entrega_detalle.duracion_dias_snapshot',
                 'productos.nombre as producto_actual',
                 'unidades_medida.codigo as unidad_base_codigo_actual',
                 'lotes.numero_lote as numero_lote_actual',
                 'lotes.fecha_vencimiento as fecha_vencimiento_actual',
                 'receta_detalle.cantidad_indicada as cantidad_prescrita',
+                'receta_detalle.duracion_dias as duracion_dias_receta',
                 DB::raw('COALESCE(total_dispensado.cantidad_dispensada, 0) as cantidad_dispensada_total'),
             ]);
-        $details->each(function ($detail) {
+        $details->each(function ($detail) use ($order) {
             $detail->producto = $detail->producto_nombre_snapshot ?: $detail->producto_actual;
             $detail->unidad_base_codigo = $detail->unidad_base_codigo_snapshot ?: $detail->unidad_base_codigo_actual;
             $detail->numero_lote = $detail->numero_lote_snapshot ?: $detail->numero_lote_actual;
             $detail->fecha_vencimiento = $detail->fecha_vencimiento_lote_snapshot ?: $detail->fecha_vencimiento_actual;
-            $detail->cantidad_pendiente = $detail->cantidad_prescrita === null
+            $detail->cantidad_prescrita = $detail->cantidad_prescrita ?? $detail->cantidad_indicada_snapshot;
+            $detail->duracion_dias = $detail->duracion_dias_receta ?? $detail->duracion_dias_snapshot;
+            $detail->cantidad_pendiente = $detail->cantidad_prescrita === null || $order->es_sos
                 ? null
                 : max(0, (float) $detail->cantidad_prescrita - (float) $detail->cantidad_dispensada_total);
         });

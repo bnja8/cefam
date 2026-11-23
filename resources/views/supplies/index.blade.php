@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('content')
     <x-page-header :title="$screen === 'request-create' ? 'Solicitar reposición' : ($screen === 'receive' ? 'Recepcionar remesa' : ($screen === 'requests' ? 'Solicitudes de reposición' : 'Remesas y CENABAST'))" description="Recepción de abastecimiento con lote, fabricación, vencimiento y movimiento de bodega">
-        <x-slot:actions>@if ($screen === 'shipments')<a class="btn btn-primary" href="{{ route('supplies.receive.form') }}"><i class="fa-solid fa-truck-ramp-box"></i> Registrar recepción</a>@elseif ($screen === 'requests')<a class="btn btn-primary" href="{{ route('supplies.requests.create') }}"><i class="fa-solid fa-file-circle-plus"></i> Solicitar reposición</a>@endif</x-slot:actions>
+        <x-slot:actions>@if ($screen === 'shipments' && $canReceive)<a class="btn btn-primary" href="{{ route('supplies.receive.form') }}"><i class="fa-solid fa-truck-ramp-box"></i> Registrar recepción</a>@elseif ($screen === 'requests' && $canRequest)<a class="btn btn-primary" href="{{ route('supplies.requests.create') }}"><i class="fa-solid fa-file-circle-plus"></i> Solicitar reposición</a>@endif</x-slot:actions>
     </x-page-header>
 
     @if ($screen === 'shipments')

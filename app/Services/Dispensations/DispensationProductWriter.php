@@ -23,7 +23,7 @@ class DispensationProductWriter
         int $index,
         int $deliveryId,
         object $patient,
-        object $recipe,
+        ?object $recipe,
         Collection $prescribedDetails,
         Collection $alreadyDispensed,
         Collection $alreadyDispensedThisMonth,
@@ -31,7 +31,8 @@ class DispensationProductWriter
         array $locationIds,
         ?string $authorizerRut,
         string $userRut,
-        string $today
+        string $today,
+        bool $isSos
     ): array {
         $product = DB::table('productos')->where('producto_id', $detail['producto_id'])
             ->where('activo', true)->lockForUpdate()->first();
@@ -39,7 +40,7 @@ class DispensationProductWriter
             throw ValidationException::withMessages(["detalles.{$index}.producto_id" => 'El producto no está disponible.']);
         }
         $prescriptionDetail = $prescribedDetails->get($product->producto_id);
-        if (! $prescriptionDetail) {
+        if (! $isSos && ! $prescriptionDetail) {
             throw ValidationException::withMessages(["detalles.{$index}.producto_id" => 'La receta no contiene el producto seleccionado.']);
         }
 
@@ -49,8 +50,10 @@ class DispensationProductWriter
                 ->where('unidad_medida_id', $product->unidad_base_inventario_id)
                 ->value('codigo');
         $dispensedQuantities = $monthlyLimitApplies ? $alreadyDispensedThisMonth : $alreadyDispensed;
-        $remaining = max(0, (float) $prescriptionDetail->cantidad_indicada - (float) ($dispensedQuantities->get($product->producto_id) ?? 0));
-        if ((float) $detail['cantidad'] > $remaining + 0.00001) {
+        $remaining = $isSos
+            ? null
+            : max(0, (float) $prescriptionDetail->cantidad_indicada - (float) ($dispensedQuantities->get($product->producto_id) ?? 0));
+        if (! $isSos && (float) $detail['cantidad'] > $remaining + 0.00001) {
             throw ValidationException::withMessages([
                 "detalles.{$index}.cantidad" => $monthlyLimitApplies
                     ? 'La cantidad a entregar supera el saldo disponible para este mes: '.$remaining.'.'
@@ -95,12 +98,14 @@ class DispensationProductWriter
                 'cantidad' => $lot->cantidad_asignada,
                 'producto_nombre_snapshot' => $product->nombre,
                 'unidad_base_codigo_snapshot' => $unitBaseCode,
+                'cantidad_indicada_snapshot' => null,
+                'duracion_dias_snapshot' => null,
                 'numero_lote_snapshot' => $lot->numero_lote,
                 'fecha_vencimiento_lote_snapshot' => $lot->fecha_vencimiento,
                 'cuota_id' => $quotaRow->cuota_id ?? null,
-                'dosis' => $prescriptionDetail->dosis,
-                'horario' => $prescriptionDetail->frecuencia,
-                'indicaciones' => $prescriptionDetail->indicaciones,
+                'dosis' => $isSos ? null : ($detail['dosis'] ?? $prescriptionDetail->dosis),
+                'horario' => $detail['frecuencia'] ?? ($isSos ? 'SOS' : $prescriptionDetail->frecuencia),
+                'indicaciones' => $detail['indicaciones'] ?? ($isSos ? 'Tratamiento SOS' : $prescriptionDetail->indicaciones),
             ]);
             DB::table('movimientos_inventario')->insert([
                 'lote_id' => $lot->lote_id,
@@ -135,7 +140,7 @@ class DispensationProductWriter
                     'firma_autorizacion' => 'Validación de identidad mediante credenciales del Químico Farmacéutico; sin firma digital certificada.',
                     'referencia_tipo' => 'ENTREGA',
                     'referencia_id' => $deliveryId,
-                    'observacion' => 'Dispensación de receta '.$recipe->numero_receta.' a paciente '.$patient->rut,
+                    'observacion' => ($isSos ? 'Dispensación de tratamiento SOS' : 'Dispensación de receta '.$recipe->numero_receta).' a paciente '.$patient->rut,
                     'firmado' => true,
                 ]);
             }

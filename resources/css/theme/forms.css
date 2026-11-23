@@ -1,28 +1,29 @@
 
 .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus-ring); }
 .form-control:disabled { color: #526b7b; background: #edf2f5; cursor: not-allowed; opacity: 1; }
+.dispensation-authorized-person-picker .btn:disabled { color: #526b7b; background: #edf2f5; border-color: #cbd5dc; }
 .form-control::placeholder { color: #748896; opacity: 1; }
 .form-control[aria-invalid="true"]:focus { border-color: #b4232f; box-shadow: 0 0 0 3px rgba(180,35,47,.12); }
 .form-group label { cursor: pointer; }
-.btn { min-height: 40px; padding: 9px 15px; border-radius: 7px; font-size: 13px; font-weight: 650; box-shadow: none; }
+.btn { min-height: 44px; padding: 9px 15px; border-radius: 7px; font-size: 13px; font-weight: 650; box-shadow: none; }
 .btn-primary { color: #fff; background: var(--accent); border-color: var(--accent); }
-.btn-primary:hover { color: #fff; background: var(--accent-hover); border-color: var(--accent-hover); box-shadow: 0 3px 8px rgba(146,64,14,.2); }
+.btn-primary:hover { color: #fff; background: var(--accent-hover); border-color: var(--accent-hover); box-shadow: 0 3px 8px rgba(11,85,120,.18); }
 .btn-outline { color: var(--primary-dark); background: #fff; border-color: var(--border-strong); }
 .btn-outline:hover { color: var(--primary-dark); background: #f1f6f9; border-color: #a9c1cf; }
 .btn-success { color: #fff; background: var(--success); }
 .btn-success:hover { color: #fff; background: #1d5e3d; }
-.btn-small { min-height: 34px; padding: 6px 10px; font-size: 11.5px; }
-.form-control { min-height: 42px; padding: 9px 12px; border-color: var(--border-strong); border-radius: var(--radius-control); color: #20394a; background-color: #fff; font-size: 13px; }
-input { border-color: var(--border-strong); border-radius: var(--radius-control); color: #20394a; background-color: #fff; }
-select { border-color: var(--border-strong); border-radius: var(--radius-control); color: #20394a; background-color: #fff; }
-textarea { border-color: var(--border-strong); border-radius: var(--radius-control); color: #20394a; background-color: #fff; }
-.form-group label { color: #334f62; font-size: 13px; }
+.btn-small { min-height: 38px; padding: 6px 10px; font-size: 11.5px; }
+.form-control { min-height: 44px; padding: 9px 12px; border-color: var(--border-strong); border-radius: var(--radius-control); color: var(--text); background-color: #fff; font-size: 13px; }
+input { border-color: var(--border-strong); border-radius: var(--radius-control); color: var(--text); background-color: #fff; }
+select { border-color: var(--border-strong); border-radius: var(--radius-control); color: var(--text); background-color: #fff; }
+textarea { border-color: var(--border-strong); border-radius: var(--radius-control); color: var(--text); background-color: #fff; }
+.form-group label { color: #536578; font-size: 13px; }
 button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 button:disabled { cursor: not-allowed; }
 input:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 select:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 textarea:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
-.notice-info { color: #075985; background: #f0f6f9; border-color: #0b5578; }
+.notice-info { color: var(--primary-dark); background: #f0f6f9; border-color: #0b5578; }
 .detail-heading { margin-top: 8px; }
 .detail-heading h3 { font-size: 14px; }
 .detail-rows { gap: 14px; }
@@ -177,6 +178,12 @@ textarea:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2
     line-height: 1.35;
 }
 .dispensation-field-delivery { grid-area: delivery; }
+.dispensation-prescription-row.is-sos-mode .product-picker label { margin-bottom: 7px; }
+.dispensation-prescription-row.is-sos-mode .product-picker .form-control {
+    min-height: 42px;
+    padding: 9px 12px;
+    font-size: 13px;
+}
 .dispensation-prescription-row.is-prescription-locked [data-product-picker] { pointer-events: none; }
 .dispensation-prescription-row.is-prescription-locked input[readonly],
 .dispensation-prescription-row.is-prescription-locked input:disabled {

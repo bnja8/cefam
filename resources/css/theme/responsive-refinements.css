@@ -7,7 +7,7 @@
     .topbar .user-name { font-size: 10.5px; }
     .topbar .user-avatar { width: 32px; height: 32px; flex-basis: 32px; }
     .topbar .sidebar-toggle-btn,
-    .topbar .icon-btn { width: 36px; height: 36px; min-width: 36px; min-height: 36px; }
+    .topbar .icon-btn { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
     .content-body {
         width: calc(100% - 24px);
         margin: 12px auto;

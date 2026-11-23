@@ -9,6 +9,27 @@ use Illuminate\Support\Facades\Auth;
 
 abstract class Controller
 {
+    protected function authorizePermission(
+        string $permission,
+        AuditLogger $audit,
+        string $entity,
+        int|string|null $recordId = null
+    ): void {
+        $user = Auth::user();
+        if ($user instanceof Usuario && $user->hasPermission($permission)) {
+            return;
+        }
+
+        $audit->record(
+            'ACCESO_DENEGADO',
+            $entity,
+            is_int($recordId) ? $recordId : null,
+            'RECHAZADO',
+            is_string($recordId) ? ['rut' => $recordId] : []
+        );
+        abort(403);
+    }
+
     protected function authorizeAdministrator(AuditLogger $audit, string $entity, int|string|null $recordId = null): void
     {
         $user = Auth::user();

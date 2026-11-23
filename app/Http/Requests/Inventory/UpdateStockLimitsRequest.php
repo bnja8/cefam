@@ -6,9 +6,19 @@ use Illuminate\Validation\Validator;
 
 class UpdateStockLimitsRequest extends InventoryRequest
 {
-    protected const AUTHORIZED_ROLES = ['Administrador', 'Químico Farmacéutico'];
+    protected const AUTHORIZED_PERMISSION = 'inventory.limits.manage';
 
     protected const AUDIT_ENTITY = 'stock_minimos_ubicacion';
+
+    protected function getRedirectUrl(): string
+    {
+        $url = route('products.stock', $this->route('productId'));
+        $locationId = filter_var($this->input('ubicacion_id'), FILTER_VALIDATE_INT);
+
+        return $locationId === false
+            ? $url
+            : $url.'#stock-ubicacion-'.$locationId;
+    }
 
     // Define los datos permitidos para los límites por ubicación.
     public function rules(): array

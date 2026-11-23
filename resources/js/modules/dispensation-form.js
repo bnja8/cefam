@@ -4,12 +4,17 @@ import { formatQuantity } from './format';
 export const initializeDispensationForm = () => {
     const patientSelect = document.querySelector('#paciente_rut');
     const recipeSelect = document.querySelector('#receta_id');
+    const recipeSelectLabel = document.querySelector('[data-recipe-select-label]');
+    const recipeSelectHelp = document.querySelector('[data-recipe-select-help]');
     const authorizedPersonSelect = document.querySelector('#persona_autorizada_id');
     const dispensationList = document.querySelector('[data-dispensation-details]');
     const dispensationForm = dispensationList?.closest('[data-dispensation-form]');
     const dispensationEmpty = document.querySelector('[data-dispensation-empty]');
     const dispensationTemplate = document.querySelector('#dispensation-detail-template');
     const dispensationAddButton = document.querySelector('[data-add-row="dispensation-details"]');
+    const sosModeInput = document.querySelector('[data-treatment-sos-mode]');
+    const sosModeToggle = document.querySelector('[data-toggle-sos-treatment]');
+    const modeTitle = document.querySelector('[data-dispensation-mode-title]');
     const patientSearchInput = document.querySelector('#patient-search');
     const prescriptionVerification = document.querySelector('[data-prescription-verification]');
     const prescriptionConfirmation = document.querySelector('[data-prescription-confirmation]');
@@ -31,6 +36,7 @@ export const initializeDispensationForm = () => {
     let authorizedPersonFormOpen = authorizedPersonPanel?.dataset.openOnLoad === 'true';
     let verifiedRecipeId = '';
     let authorizationConfirmed = false;
+    let isSosMode = sosModeInput?.value === '1';
     const dispensationRows = createDispensationPrescriptionRows({
         patientSelect,
         recipeSelect,
@@ -105,6 +111,10 @@ export const initializeDispensationForm = () => {
             ? `Paciente vinculado: ${patientSearchInput?.value.trim() || patientSelect.value}`
             : 'Selecciona un paciente para asociar la autorización.';
     };
+    const updateAuthorizedPersonPlaceholder = () => {
+        const placeholder = authorizedPersonSelect?.options[0];
+        if (placeholder) placeholder.textContent = isSosMode ? 'SOS' : 'No, retira el paciente';
+    };
     const syncAuthorizedPersonForm = () => {
         if (!authorizedPersonPanel) return;
         authorizedPersonPanel.hidden = !authorizedPersonFormOpen;
@@ -113,7 +123,7 @@ export const initializeDispensationForm = () => {
             field.required = authorizedPersonFormOpen;
         });
         if (authorizedPersonToggle) {
-            authorizedPersonToggle.disabled = !patientSelect?.value;
+            authorizedPersonToggle.disabled = isSosMode || !patientSelect?.value;
             authorizedPersonToggle.setAttribute('aria-expanded', String(authorizedPersonFormOpen));
         }
         if (authorizedPersonButtonLabel) {
@@ -124,7 +134,7 @@ export const initializeDispensationForm = () => {
         updateAuthorizedPersonPatient();
     };
     const setAuthorizedPersonFormOpen = (isOpen, { keepAuthorizedPersonSelection = false, clearFields = false } = {}) => {
-        if (isOpen && !patientSelect?.value) return;
+        if (isOpen && (!patientSelect?.value || isSosMode)) return;
         authorizedPersonFormOpen = isOpen;
 
         if (authorizedPersonSelect) {
@@ -148,10 +158,73 @@ export const initializeDispensationForm = () => {
         });
         syncAuthorizedPersonForm();
     };
+    const updateDispensationMode = () => {
+        const hasPatient = Boolean(patientSelect?.value);
+        const hasRecipe = Boolean(recipeSelect?.value) && !isSosMode;
+        if (dispensationList) dispensationList.dataset.treatmentSos = String(isSosMode);
+        if (recipeSelect) {
+            recipeSelect.disabled = isSosMode || !hasPatient;
+            recipeSelect.required = !isSosMode;
+        }
+        if (recipeSelectLabel) recipeSelectLabel.textContent = isSosMode ? 'Receta vigente' : 'Receta vigente *';
+        if (recipeSelectHelp) {
+            recipeSelectHelp.textContent = isSosMode
+                ? 'No se requiere una receta vigente para el tratamiento SOS.'
+                : 'Al seleccionar una receta, se cargan sus medicamentos y lotes FEFO.';
+        }
+        if (authorizedPersonSelect) {
+            authorizedPersonSelect.disabled = isSosMode || !hasPatient;
+            updateAuthorizedPersonPlaceholder();
+        }
+        if (authorizedPersonToggle) authorizedPersonToggle.disabled = isSosMode || !hasPatient;
+        if (sosModeInput) sosModeInput.value = isSosMode ? '1' : '0';
+        if (sosModeToggle) {
+            sosModeToggle.textContent = isSosMode ? 'Volver a dispensación con receta' : 'Tratamiento SOS';
+            sosModeToggle.setAttribute('aria-pressed', String(isSosMode));
+        }
+        if (modeTitle) modeTitle.textContent = isSosMode ? 'Medicamentos SOS' : 'Medicamentos prescritos';
+
+        const rows = [...dispensationList?.querySelectorAll('[data-dispensation-row]') || []];
+        const canEditRows = hasPatient && (isSosMode || hasRecipe);
+        rows.forEach((row) => {
+            row.hidden = !isSosMode && !canEditRows;
+            row.classList.toggle('is-sos-mode', isSosMode);
+            row.querySelectorAll('[data-prescription-only]').forEach((group) => {
+                group.hidden = false;
+                group.querySelectorAll('input, select, textarea').forEach((field) => {
+                    field.disabled = isSosMode || !canEditRows;
+                    if (field.matches('[data-dose-amount], [data-treatment-duration], [data-prescription-frequency], [data-prescribed-quantity]')) {
+                        field.required = !isSosMode;
+                    }
+                });
+            });
+            const productHelp = row.querySelector('.product-search-help');
+            if (productHelp) {
+                productHelp.textContent = isSosMode
+                    ? 'Busca el medicamento que se entregará.'
+                    : 'Busca el medicamento indicado en la receta y selecciona un resultado.';
+            }
+            row.querySelectorAll('input, select, textarea').forEach((field) => {
+                if (!field.closest('[data-prescription-only]')) {
+                    field.disabled = !canEditRows;
+                }
+            });
+        });
+        if (dispensationAddButton) {
+            if (isSosMode) {
+                dispensationAddButton.hidden = false;
+                dispensationAddButton.disabled = false;
+            } else {
+                dispensationAddButton.disabled = false;
+                if (!hasRecipe) dispensationAddButton.hidden = true;
+            }
+        }
+        if (isSosMode && rows.length === 0) dispensationAddButton?.click();
+    };
     const updatePrescriptionVerification = () => {
         const recipeOption = recipeSelect?.selectedOptions[0];
         if (!prescriptionVerification || !prescriptionConfirmation) return;
-        if (!recipeOption?.value) {
+        if (isSosMode || !recipeOption?.value) {
             prescriptionVerification.hidden = true;
             prescriptionConfirmation.disabled = true;
             prescriptionConfirmation.required = false;
@@ -224,7 +297,7 @@ export const initializeDispensationForm = () => {
             if (prescriptionConfirmation) prescriptionConfirmation.checked = false;
             if (dispensationAddButton) {
                 dispensationAddButton.hidden = false;
-                dispensationAddButton.click();
+                if (isSosMode || recipeSelect.value) dispensationAddButton.click();
             }
         }
         if (nextPatientRut) activePatientRut = nextPatientRut;
@@ -234,17 +307,19 @@ export const initializeDispensationForm = () => {
         }
         const placeholderOptions = [
             [recipeSelect, 'Seleccione la receta vigente'],
-            [authorizedPersonSelect, 'No, retira el paciente'],
+            [authorizedPersonSelect, isSosMode ? 'SOS' : 'No, retira el paciente'],
         ];
         const requestId = String(Number(patientSelect.dataset.optionsRequest || 0) + 1);
         patientSelect.dataset.optionsRequest = requestId;
         placeholderOptions.forEach(([select, label])  => {
             select.replaceChildren(new Option(label, ''));
             select.value = '';
-            select.disabled = !patientSelect.value;
+            select.disabled = isSosMode || !patientSelect.value;
         });
         recipeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        updateDispensationMode();
         if (!patientSelect.value) return;
+        if (isSosMode) return;
 
         try {
             const url = patientSelect.dataset.dispensationOptionsUrl.replace('__PATIENT__', encodeURIComponent(patientSelect.value));
@@ -266,6 +341,7 @@ export const initializeDispensationForm = () => {
             });
             recipeSelect.disabled = false;
             authorizedPersonSelect.disabled = false;
+            updateDispensationMode();
             syncAuthorizedPersonForm();
             if (authorizedPersonFormOpen) setAuthorizedPersonFormOpen(true);
             const selectedRecipeId = recipeSelect.dataset.selectedRecipe;
@@ -279,6 +355,33 @@ export const initializeDispensationForm = () => {
             console.error(error);
         }
     };
+    const setSosMode = (enabled) => {
+        if (enabled === isSosMode) return;
+        const hasSelectedData = Boolean(recipeSelect?.value)
+            || [...dispensationList?.querySelectorAll('[data-dispensation-row]') || []]
+                .some((row) => row.querySelector('[data-product-select]')?.value || row.querySelector('[data-delivery-quantity]')?.value);
+        if (hasSelectedData && !window.confirm('Al cambiar el modo se descartarán los medicamentos cargados. ¿Deseas continuar?')) return;
+
+        isSosMode = enabled;
+        if (recipeSelect) {
+            recipeSelect.value = '';
+            delete recipeSelect.dataset.selectedRecipe;
+        }
+        verifiedRecipeId = '';
+        if (prescriptionConfirmation) prescriptionConfirmation.checked = false;
+        setAuthorizedPersonFormOpen(false, { clearFields: true });
+        dispensationRows.clear();
+        if (authorizedPersonSelect) {
+            authorizedPersonSelect.value = '';
+            updateAuthorizedPersonPlaceholder();
+        }
+        updatePrescriptionVerification();
+        dispensationRows.render();
+        updateDispensationMode();
+        if (!isSosMode && patientSelect?.value) loadPatientOptions();
+        applyPrescription();
+    };
+    sosModeToggle?.addEventListener('click', () => setSosMode(!isSosMode));
     authorizedPersonToggle?.addEventListener('click', () => {
         setAuthorizedPersonFormOpen(!authorizedPersonFormOpen);
     });
@@ -290,12 +393,15 @@ export const initializeDispensationForm = () => {
     patientSearchInput?.addEventListener('input', updateAuthorizedPersonPatient);
     if (authorizedPersonFormOpen) setAuthorizedPersonFormOpen(true);
     else syncAuthorizedPersonForm();
+    if (isSosMode && recipeSelect) recipeSelect.value = '';
+    updateDispensationMode();
     patientSelect?.addEventListener('change', loadPatientOptions);
-    if (patientSelect?.value) loadPatientOptions();
+    if (patientSelect?.value && !isSosMode) loadPatientOptions();
     const applyPrescription = () => {
         const rows = dispensationRows.refresh();
         if (dispensationEmpty) dispensationEmpty.hidden = rows.length > 0;
         updateControlledAuthorization();
+        updateDispensationMode();
     };
     recipeSelect?.addEventListener('change', ()  => {
         const recipeId = recipeSelect.value;

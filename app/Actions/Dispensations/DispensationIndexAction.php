@@ -82,6 +82,7 @@ class DispensationIndexAction
                 'entregas.entrega_id',
                 'entregas.fecha_hora',
                 'entregas.estado',
+                'entregas.es_sos',
                 'ordenes_entrega.orden_entrega_id',
                 'ordenes_entrega.numero_orden',
                 PersonName::expression('pacientes', 'paciente'),

@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 abstract class InventoryRequest extends FormRequest
 {
-    protected const AUTHORIZED_ROLES = [];
+    protected const AUTHORIZED_PERMISSION = '';
 
     protected const AUDIT_ENTITY = 'inventario';
 
@@ -16,7 +16,7 @@ abstract class InventoryRequest extends FormRequest
     public function authorize(AuditLogger $audit): bool
     {
         $user = $this->user();
-        if ($user instanceof Usuario && $user->hasAnyRole(static::AUTHORIZED_ROLES)) {
+        if ($user instanceof Usuario && $user->hasPermission(static::AUTHORIZED_PERMISSION)) {
             return true;
         }
 

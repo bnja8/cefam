@@ -3,10 +3,9 @@ a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible,
-[tabindex]:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+textarea:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 ::selection { color: #fff; background: var(--primary); }
-.skip-link { position: fixed; z-index: 100; top: 8px; left: 8px; transform: translateY(calc(-100% - 12px)); padding: 11px 15px; border-radius: 6px; color: #fff; background: #073e5b; font-size: 13px; font-weight: 650; text-decoration: none; box-shadow: 0 3px 12px rgba(15,50,70,.2); }
+.skip-link { position: fixed; z-index: 100; top: 8px; left: 8px; transform: translateY(calc(-100% - 12px)); padding: 11px 15px; border-radius: 6px; color: #fff; background: var(--primary-dark); font-size: 13px; font-weight: 650; text-decoration: none; box-shadow: 0 3px 12px rgba(15,50,70,.2); }
 .skip-link:focus { transform: translateY(0); }
 .text-primary { color: var(--primary); }
 .text-link { color: var(--primary); font-size: 12px; font-weight: 650; }

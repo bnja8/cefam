@@ -32,7 +32,8 @@ class DispensationStoreAction
             ? $this->authorization->authorizeControlledDispensation($data)
             : null;
 
-        $delivery = DB::transaction(function () use ($data, $audit, $authorizerRut, $patientFiles) {
+        $delivery = DB::transaction(function () use ($data, $audit, $authorizerRut, $patientFiles, $hasControlledProduct) {
+            $isSos = filter_var($data['tratamiento_sos'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $patient = DB::table('pacientes')->where('rut', $data['paciente_rut'])
                 ->where('activo', true)->lockForUpdate()->first();
             if (! $patient) {
@@ -40,20 +41,20 @@ class DispensationStoreAction
             }
             $fichaId = $patientFiles->ensureForPatient($patient->rut);
             $today = now()->toDateString();
-            $recipe = DB::table('recetas')->where('receta_id', $data['receta_id'])
+            $recipe = $isSos ? null : DB::table('recetas')->where('receta_id', $data['receta_id'])
                 ->where('paciente_rut', $data['paciente_rut'])
                 ->where('estado', 'VIGENTE')
                 ->where('fecha_vencimiento', '>=', $today)
                 ->lockForUpdate()
                 ->first();
-            if (! $recipe) {
+            if (! $isSos && ! $recipe) {
                 throw ValidationException::withMessages(['receta_id' => 'La receta está vencida, no corresponde al paciente o no está vigente.']);
             }
-            $treatment = DB::table('tratamientos')
+            $treatment = $recipe ? DB::table('tratamientos')
                 ->where('receta_id', $recipe->receta_id)
                 ->lockForUpdate()
-                ->first();
-            $monthlyLimitApplies = $treatment
+                ->first() : null;
+            $monthlyLimitApplies = ! $isSos && $treatment
                 && (bool) $treatment->activo
                 && $treatment->fecha_inicio <= $today
                 && ($treatment->fecha_termino === null || $treatment->fecha_termino >= $today);
@@ -100,7 +101,7 @@ class DispensationStoreAction
                 }
             }
 
-            $prescribedDetails = DB::table('receta_detalle')
+            $prescribedDetails = $recipe ? DB::table('receta_detalle')
                 ->join('productos', 'productos.producto_id', '=', 'receta_detalle.producto_id')
                 ->where('receta_id', $recipe->receta_id)
                 ->lockForUpdate()
@@ -115,18 +116,18 @@ class DispensationStoreAction
                     'indicaciones',
                     'productos.es_controlado',
                 ])
-                ->keyBy('producto_id');
-            $alreadyDispensed = DB::table('entrega_detalle')
+                ->keyBy('producto_id') : collect();
+            $alreadyDispensed = $recipe ? DB::table('entrega_detalle')
                 ->join('entregas', 'entregas.entrega_id', '=', 'entrega_detalle.entrega_id')
                 ->where('entregas.receta_id', $recipe->receta_id)
                 ->where('entregas.estado', 'CONFIRMADA')
                 ->select('entrega_detalle.producto_id')
                 ->selectRaw('SUM(entrega_detalle.cantidad) as cantidad')
                 ->groupBy('entrega_detalle.producto_id')
-                ->pluck('cantidad', 'producto_id');
+                ->pluck('cantidad', 'producto_id') : collect();
             $monthStart = now()->startOfMonth()->startOfDay();
             $nextMonthStart = $monthStart->copy()->addMonthNoOverflow();
-            $alreadyDispensedThisMonth = $monthlyLimitApplies
+            $alreadyDispensedThisMonth = $recipe && $monthlyLimitApplies
                 ? DB::table('entrega_detalle')
                     ->join('entregas', 'entregas.entrega_id', '=', 'entrega_detalle.entrega_id')
                     ->where('entregas.receta_id', $recipe->receta_id)
@@ -139,16 +140,16 @@ class DispensationStoreAction
                     ->pluck('cantidad', 'producto_id')
                 : collect();
 
-            $this->prescriptionValidator->validate(
-                $data,
-                $prescribedDetails,
-                $alreadyDispensed,
-                $alreadyDispensedThisMonth,
-                (bool) $monthlyLimitApplies
-            );
-            $requiresControlledAuthorization = collect($data['detalles'])->contains(
-                fn ($detail) => (bool) ($prescribedDetails->get($detail['producto_id'])?->es_controlado ?? false)
-            );
+            if (! $isSos) {
+                $this->prescriptionValidator->validate(
+                    $data,
+                    $prescribedDetails,
+                    $alreadyDispensed,
+                    $alreadyDispensedThisMonth,
+                    (bool) $monthlyLimitApplies
+                );
+            }
+            $requiresControlledAuthorization = $hasControlledProduct;
             if ($requiresControlledAuthorization && $authorizerRut === null) {
                 throw ValidationException::withMessages([
                     'autorizacion_qf' => 'Se requiere la validación de un Químico Farmacéutico para dispensar medicamentos controlados.',
@@ -164,7 +165,8 @@ class DispensationStoreAction
                 'paciente_nombre_snapshot' => PersonName::format($patient),
                 'persona_autorizada_nombre_snapshot' => $authorizedPerson ? PersonName::format($authorizedPerson) : null,
                 'persona_autorizada_rut_snapshot' => $authorizedPerson->rut ?? null,
-                'receta_id' => $data['receta_id'],
+                'receta_id' => $recipe?->receta_id,
+                'es_sos' => $isSos,
                 'usuario_rut' => Auth::id(),
                 'estado' => 'CONFIRMADA',
                 'estado_ficha' => 'RECIENTE',
@@ -187,7 +189,8 @@ class DispensationStoreAction
                     $locationIds,
                     $authorizerRut,
                     (string) Auth::id(),
-                    $today
+                    $today,
+                    $isSos
                 );
             }
             if ($requiresControlledAuthorization) {
@@ -202,26 +205,29 @@ class DispensationStoreAction
             ]);
             $audit->record('DISPENSACION', 'entregas', $deliveryId, 'EXITOSO', [
                 'paciente_rut' => $patient->rut,
-                'receta_id' => $recipe->receta_id,
+                'receta_id' => $recipe?->receta_id,
+                'tratamiento_sos' => $isSos,
                 'receta_verificada' => (bool) ($data['confirmacion_receta'] ?? false),
                 'detalles' => $dispensedItems,
             ]);
 
-            $dispensedByProduct = DB::table('entrega_detalle')
-                ->join('entregas', 'entregas.entrega_id', '=', 'entrega_detalle.entrega_id')
-                ->where('entregas.receta_id', $recipe->receta_id)
-                ->where('entregas.estado', 'CONFIRMADA')
-                ->select('entrega_detalle.producto_id')
-                ->selectRaw('SUM(entrega_detalle.cantidad) as cantidad_dispensada')
-                ->groupBy('entrega_detalle.producto_id');
-            $hasUndispensedPrescriptionItems = DB::table('receta_detalle')
-                ->leftJoinSub($dispensedByProduct, 'dispensado', fn ($join) => $join
-                    ->on('dispensado.producto_id', '=', 'receta_detalle.producto_id'))
-                ->where('receta_detalle.receta_id', $recipe->receta_id)
-                ->whereRaw('receta_detalle.cantidad_indicada > COALESCE(dispensado.cantidad_dispensada, 0) + 0.00001')
-                ->exists();
-            if (! $monthlyLimitApplies && ! $hasUndispensedPrescriptionItems) {
-                DB::table('recetas')->where('receta_id', $recipe->receta_id)->update(['estado' => 'UTILIZADA']);
+            if ($recipe) {
+                $dispensedByProduct = DB::table('entrega_detalle')
+                    ->join('entregas', 'entregas.entrega_id', '=', 'entrega_detalle.entrega_id')
+                    ->where('entregas.receta_id', $recipe->receta_id)
+                    ->where('entregas.estado', 'CONFIRMADA')
+                    ->select('entrega_detalle.producto_id')
+                    ->selectRaw('SUM(entrega_detalle.cantidad) as cantidad_dispensada')
+                    ->groupBy('entrega_detalle.producto_id');
+                $hasUndispensedPrescriptionItems = DB::table('receta_detalle')
+                    ->leftJoinSub($dispensedByProduct, 'dispensado', fn ($join) => $join
+                        ->on('dispensado.producto_id', '=', 'receta_detalle.producto_id'))
+                    ->where('receta_detalle.receta_id', $recipe->receta_id)
+                    ->whereRaw('receta_detalle.cantidad_indicada > COALESCE(dispensado.cantidad_dispensada, 0) + 0.00001')
+                    ->exists();
+                if (! $monthlyLimitApplies && ! $hasUndispensedPrescriptionItems) {
+                    DB::table('recetas')->where('receta_id', $recipe->receta_id)->update(['estado' => 'UTILIZADA']);
+                }
             }
 
             return ['delivery_id' => $deliveryId, 'order_id' => $orderId];

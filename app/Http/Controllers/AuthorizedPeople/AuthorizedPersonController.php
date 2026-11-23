@@ -26,7 +26,7 @@ class AuthorizedPersonController extends Controller
 
         $screen = $request->route('screen', 'list');
         if ($screen === 'create') {
-            abort_unless($user->hasAnyRole(['Administrador', 'Técnico Farmacéutico']), 403);
+            abort_unless($user->hasPermission('authorized-people.manage'), 403);
 
             $patients = DB::table('pacientes')->where('activo', true)
                 ->orderBy('apellidoPaterno')->orderBy('apellidoMaterno')->orderBy('nombre')
@@ -118,7 +118,7 @@ class AuthorizedPersonController extends Controller
             'screen' => 'list',
             'authorizedPeople' => $authorizedPeople,
             'filters' => $filters,
-            'canRegister' => $user->hasAnyRole(['Administrador', 'Técnico Farmacéutico']),
+            'canRegister' => $user->hasPermission('authorized-people.manage'),
             'activePatientCount' => DB::table('pacientes')->where('activo', true)->count(),
             'selectedPatient' => DB::table('pacientes')
                 ->where('rut', old('paciente_rut'))
@@ -132,7 +132,7 @@ class AuthorizedPersonController extends Controller
     public function store(Request $request, AuditLogger $audit): RedirectResponse|JsonResponse
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Técnico Farmacéutico'])) {
+        if (! $user instanceof Usuario || ! $user->hasPermission('authorized-people.manage')) {
             $audit->record('ACCESO_DENEGADO', 'personas_autorizadas', null, 'RECHAZADO');
             abort(403);
         }
@@ -172,7 +172,7 @@ class AuthorizedPersonController extends Controller
 
     public function edit(int $authorizedPersonId, AuditLogger $audit, Request $request): View|JsonResponse
     {
-        $this->authorizeAdministrator($audit, 'personas_autorizadas', $authorizedPersonId);
+        $this->authorizePermission('authorized-people.manage', $audit, 'personas_autorizadas', $authorizedPersonId);
         $authorizedPerson = DB::table('personas_autorizadas')->where('persona_autorizada_id', $authorizedPersonId)->first();
         abort_unless($authorizedPerson, 404);
 
@@ -199,7 +199,7 @@ class AuthorizedPersonController extends Controller
     // Valida y actualiza el registro existente.
     public function update(Request $request, int $authorizedPersonId, AuditLogger $audit): RedirectResponse|JsonResponse
     {
-        $this->authorizeAdministrator($audit, 'personas_autorizadas', $authorizedPersonId);
+        $this->authorizePermission('authorized-people.manage', $audit, 'personas_autorizadas', $authorizedPersonId);
         $authorizedPerson = DB::table('personas_autorizadas')->where('persona_autorizada_id', $authorizedPersonId)->first();
         abort_unless($authorizedPerson, 404);
         $request->merge(['rut' => Rut::limpiarRut((string) $request->input('rut', ''))]);
@@ -235,7 +235,7 @@ class AuthorizedPersonController extends Controller
 
     public function toggle(int $authorizedPersonId, AuditLogger $audit, Request $request): RedirectResponse|JsonResponse
     {
-        $this->authorizeAdministrator($audit, 'personas_autorizadas', $authorizedPersonId);
+        $this->authorizePermission('authorized-people.manage', $audit, 'personas_autorizadas', $authorizedPersonId);
         $authorizedPerson = DB::table('personas_autorizadas')->where('persona_autorizada_id', $authorizedPersonId)->first();
         abort_unless($authorizedPerson, 404);
 

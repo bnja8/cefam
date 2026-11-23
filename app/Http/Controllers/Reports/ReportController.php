@@ -10,7 +10,6 @@ use App\Services\Reports\ReportCsvValueSanitizer;
 use App\Services\Reports\ReportQueryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -21,10 +20,13 @@ class ReportController extends Controller
 {
     public function index(Request $request, AuditLogger $audit, ReportQueryService $queries): View|JsonResponse
     {
-        $this->authorizeReportAccess($audit);
-        $screen = $request->route('screen', 'summary');
+        $this->authorizeReportAccess($audit, 'reports.view');
+        $screen = $request->route('screen', 'deliveries');
+        if ($screen === 'controlled') {
+            $this->authorizeReportAccess($audit, 'controlled-ledger.view');
+        }
 
-        $filters = in_array($screen, ['summary', 'deliveries', 'movements', 'controlled', 'kardex'], true) ? $request->validate([
+        $filters = in_array($screen, ['deliveries', 'movements', 'controlled', 'kardex'], true) ? $request->validate([
             'desde' => ['nullable', 'bail', new FourDigitDate()],
             'hasta' => ['nullable', 'bail', new FourDigitDate(), 'after_or_equal:desde'],
         ]) : [];
@@ -101,6 +103,7 @@ class ReportController extends Controller
             'screen' => $screen,
             'title' => $titles[$screen] ?? 'Reportes',
             'description' => 'Movimientos de inventario, dispensaciones y existencias para auditoría',
+            'canExport' => Auth::user()?->hasPermission('reports.export') ?? false,
             'movements' => $movements,
             'filters' => $filters,
             'stockByCategory' => $stockByCategory,
@@ -110,23 +113,6 @@ class ReportController extends Controller
             'controlledMovements' => $controlledMovements,
             'kardexEntries' => $kardexEntries,
             'deliveryFilters' => $deliveryFilters,
-            'deliveryCount' => $screen === 'summary' ? DB::table('entregas')
-                ->where('estado', 'CONFIRMADA')
-                ->when(isset($filters['desde']), fn ($query) => $query->where('fecha_hora', '>=', $filters['desde']))
-                ->when(isset($filters['hasta']), fn ($query) => $query->where('fecha_hora', '<', Carbon::parse($filters['hasta'])->addDay()->toDateString()))
-                ->count() : 0,
-            'movementCount' => $screen === 'summary' ? $queries->movements($filters)->count() : 0,
-            'lowStockCount' => $screen === 'summary' ? DB::table('vw_stock_producto_ubicacion')
-                ->where('es_stock_critico', true)
-                ->count() : 0,
-            'expiredLotCount' => $screen === 'summary' ? DB::table('inventario')->join('lotes', 'lotes.lote_id', '=', 'inventario.lote_id')
-                ->where('inventario.cantidad', '>', 0)->whereDate('lotes.fecha_vencimiento', '<', now()->toDateString())->count() : 0,
-            'availableStock' => $screen === 'summary' ? DB::table('inventario')->join('lotes', 'lotes.lote_id', '=', 'inventario.lote_id')
-                ->where('lotes.estado', 'ACTIVO')->whereDate('lotes.fecha_vencimiento', '>=', now()->toDateString())->sum('inventario.cantidad') : 0,
-            'controlledMovementCount' => $screen === 'summary' ? DB::table('movimientos_controlados')
-                ->when(isset($filters['desde']), fn ($query) => $query->where('fecha_hora', '>=', $filters['desde']))
-                ->when(isset($filters['hasta']), fn ($query) => $query->where('fecha_hora', '<', Carbon::parse($filters['hasta'])->addDay()->toDateString()))
-                ->count() : 0,
         ];
 
         return $request->expectsJson()
@@ -136,14 +122,18 @@ class ReportController extends Controller
 
     public function export(Request $request, AuditLogger $audit, ReportQueryService $queries): StreamedResponse
     {
-        $this->authorizeReportAccess($audit);
+        $this->authorizeReportAccess($audit, 'reports.export');
         $data = $request->validate([
             'tipo' => ['nullable', 'in:movimientos,entregas,existencias,vencimientos,controlados,kardex'],
             'desde' => ['nullable', 'bail', new FourDigitDate()],
             'hasta' => ['nullable', 'bail', new FourDigitDate(), 'after_or_equal:desde'],
+            'buscar_entrega' => ['nullable', 'string', 'max:100'],
             'buscar_kardex' => ['nullable', 'string', 'max:100'],
         ]);
         $type = $data['tipo'] ?? 'movimientos';
+        if ($type === 'controlados') {
+            $this->authorizeReportAccess($audit, 'controlled-ledger.view');
+        }
         unset($data['tipo']);
         $filters = $data;
 
@@ -273,10 +263,10 @@ class ReportController extends Controller
         }, $specification['filename'], ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    private function authorizeReportAccess(AuditLogger $audit): void
+    private function authorizeReportAccess(AuditLogger $audit, string $permission): void
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(['Administrador', 'Químico Farmacéutico'])) {
+        if (! $user instanceof Usuario || ! $user->hasPermission($permission)) {
             $audit->record('ACCESO_DENEGADO', 'reportes', null, 'RECHAZADO');
             abort(403);
         }

@@ -48,6 +48,7 @@ class FarmaciaFlowsTest extends TestCase
             ->assertDontSee('id="global-search"', false)
             ->assertSee('id="sidebar-toggle"', false)
             ->assertSee('class="sidebar-logo-icon"', false)
+            ->assertSee('CESFAM · Tu salud nos importa')
             ->assertSee('id="sidebar-module-search"', false)
             ->assertSee('placeholder="Filtrar módulo clínico..."', false)
             ->assertSee('data-sidebar-module-search', false)
@@ -57,8 +58,10 @@ class FarmaciaFlowsTest extends TestCase
             ->assertDontSee('Pacientes activos')
             ->assertDontSee('Productos sin stock')
             ->assertSee('<header class="topbar">', false)
-            ->assertDontSee('Accesos rápidos')
-            ->assertDontSee('class="quick-action-link"', false)
+            ->assertSee('Accesos rápidos')
+            ->assertSee('class="quick-action-link"', false)
+            ->assertSee('Recetas')
+            ->assertSee('Dispensación')
             ->assertSee('Registrar dispensación')
             ->assertSee('Filtrar módulo clínico...')
             ->assertSee('Mapa operativo')
@@ -68,11 +71,51 @@ class FarmaciaFlowsTest extends TestCase
             ->assertSee('href="'.route('alerts.map').'"', false)
             ->assertSee('Existencias por categoría')
             ->assertSee('Productos más dispensados')
+            ->assertSee('Salud del inventario')
+            ->assertSee('Próximos vencimientos')
+            ->assertSee('RETIRO')
+            ->assertSee('Atenciones hoy')
+            ->assertSee('Recetas pendientes')
+            ->assertSee('Stock crítico')
+            ->assertSee('Lotes por vencer')
+            ->assertSee('Hoy (por hora)')
+            ->assertSee('onchange="this.form.submit()"', false)
+            ->assertDontSee('>Ver</button>', false)
+            ->assertSee('COMPROBANTE')
             ->assertSee('Amoxicilina 500 mg');
 
+        self::assertTrue(
+            strpos($response->getContent(), 'Últimas entregas de hoy')
+                < strpos($response->getContent(), 'Actividad de dispensación')
+        );
         self::assertSame(1, preg_match('/<header class="topbar">(.*?)<\/header>/s', $response->getContent(), $topbar));
         self::assertStringNotContainsString('global-search', $topbar[1]);
         self::assertStringNotContainsString('Buscar paciente, medicamento', $topbar[1]);
+
+        $hourlyResponse = $this->get(route('dashboard', ['periodo_actividad' => 'hoy']));
+        $hourlyResponse
+            ->assertOk()
+            ->assertSee('>00:00<', false)
+            ->assertSee('>21:00<', false)
+            ->assertDontSee('00:00-04:00', false)
+            ->assertDontSee('20:00-24:00', false);
+    }
+
+    public function test_dashboard_hourly_chart_reports_deliveries_in_their_actual_hour(): void
+    {
+        $patientRut = DB::table('pacientes')->value('rut');
+        DB::table('entregas')->insert([
+            'paciente_rut' => $patientRut,
+            'ficha_id' => DB::table('fichas_pacientes')->where('paciente_rut', $patientRut)->value('ficha_id'),
+            'usuario_rut' => '12345674',
+            'fecha_hora' => now()->startOfDay()->addHours(21)->addMinutes(3),
+            'estado' => 'CONFIRMADA',
+        ]);
+
+        $this->get(route('dashboard', ['periodo_actividad' => 'hoy']))
+            ->assertOk()
+            ->assertSee('>21:00<', false)
+            ->assertSee('<title>21:00: 1 atenciones</title>', false);
     }
 
     public function test_base_schema_rollback_preserves_an_imported_schema_without_ownership_marker(): void
@@ -312,12 +355,12 @@ class FarmaciaFlowsTest extends TestCase
         ];
         $this->post(route('professionals.store'), $professional)
             ->assertRedirect(route('professionals.index'));
-        $this->assertDatabaseHas('profesionales_salud', [
+        $this->assertDatabaseHas('personal_salud', [
             'rut' => '10000013K',
             'nombre' => 'Valentina',
             'tipo_profesional' => 'Enfermera',
         ]);
-        $this->assertFalse(Schema::hasColumn('profesionales_salud', 'registro_profesional'));
+        $this->assertFalse(Schema::hasColumn('personal_salud', 'registro_profesional'));
 
         $pharmacistRoleId = DB::table('roles')->where('nombre', 'Químico Farmacéutico')->value('rol_id');
         DB::table('usuario_rol')->where('usuario_rut', '12345674')->delete();
@@ -325,7 +368,7 @@ class FarmaciaFlowsTest extends TestCase
         $this->post(route('professionals.store'), array_merge($professional, [
             'rut' => '11.111.111-1',
         ]))->assertRedirect(route('professionals.index'));
-        $this->assertDatabaseHas('profesionales_salud', ['rut' => '111111111', 'tipo_profesional' => 'Enfermera']);
+        $this->assertDatabaseHas('personal_salud', ['rut' => '111111111', 'tipo_profesional' => 'Enfermera']);
 
         $professionalRut = '10000013K';
         $this->get(route('professionals.edit', $professionalRut))
@@ -340,9 +383,9 @@ class FarmaciaFlowsTest extends TestCase
             'tipo_profesional' => 'Enfermera',
             'activo' => '1',
         ])->assertRedirect(route('professionals.index'));
-        $this->assertDatabaseHas('profesionales_salud', ['rut' => $professionalRut, 'nombre' => 'Valentina Editada', 'activo' => true]);
+        $this->assertDatabaseHas('personal_salud', ['rut' => $professionalRut, 'nombre' => 'Valentina Editada', 'activo' => true]);
         $this->patch(route('professionals.toggle', $professionalRut))->assertRedirect(route('professionals.index'));
-        $this->assertDatabaseHas('profesionales_salud', ['rut' => $professionalRut, 'activo' => false]);
+        $this->assertDatabaseHas('personal_salud', ['rut' => $professionalRut, 'activo' => false]);
 
         $technicianRoleId = DB::table('roles')->where('nombre', 'Técnico Farmacéutico')->value('rol_id');
         DB::table('usuario_rol')->where('usuario_rut', '12345674')->delete();
@@ -368,7 +411,7 @@ class FarmaciaFlowsTest extends TestCase
             ->assertOk();
         $this->get(route('professionals.edit', $professionalRut))->assertForbidden();
         $this->patch(route('professionals.toggle', $professionalRut))->assertForbidden();
-        $this->assertDatabaseHas('profesionales_salud', ['rut' => '111111111', 'tipo_profesional' => 'Enfermera']);
+        $this->assertDatabaseHas('personal_salud', ['rut' => '111111111', 'tipo_profesional' => 'Enfermera']);
     }
 
     public function test_primary_module_pages_render_their_database_data(): void
@@ -409,7 +452,7 @@ class FarmaciaFlowsTest extends TestCase
         $this->get(route('alerts.index'))->assertRedirect(route('alerts.map'));
         $this->get(route('alerts.map'))->assertOk()->assertSee('Alertas');
         $this->get(route('modules.show', 'administracion'))->assertOk()->assertSee('Administración');
-        $this->get(route('reports.index'))->assertOk()->assertDontSee('id="movimientos-inventario"', false);
+        $this->get(route('reports.deliveries'))->assertOk()->assertDontSee('id="movimientos-inventario"', false);
         $this->get(route('reports.movements'))->assertOk()->assertSee('id="movimientos-inventario"', false);
         $this->get(route('controlled-ledger.index'))->assertForbidden();
     }
@@ -450,11 +493,9 @@ class FarmaciaFlowsTest extends TestCase
             ['carts.unidosis.index', [], 'id="preparaciones-unidosis"'],
             ['dispensations.index', [], 'id="registrar-entrega"'],
             ['dispensations.deliveries', [], 'id="entregas-recientes"'],
-            ['reports.index', [], 'id="exportar-reportes"'],
             ['reports.deliveries', [], 'id="entregas-dispensaciones"'],
             ['reports.stock', [], 'id="stock-por-categoria"'],
             ['reports.movements', [], 'id="movimientos-inventario"'],
-            ['reports.controlled', [], 'id="movimientos-controlados"'],
             ['users.index', [], 'id="usuarios-registrados"'],
             ['users.create', [], 'id="crear-usuario"'],
         ];
@@ -464,6 +505,8 @@ class FarmaciaFlowsTest extends TestCase
                 ->assertOk()
                 ->assertSee($content, false);
         }
+        $this->get('/reportes')->assertNotFound();
+        $this->getJson('/api/v1/reports')->assertNotFound();
 
         $this->get(route('dispensations.index'))
             ->assertSee('data-add-row="dispensation-details"', false)
@@ -543,7 +586,8 @@ class FarmaciaFlowsTest extends TestCase
             ->assertSee('aria-label="Mostrar navegación"', false)
             ->assertSee('placeholder="Filtrar módulo clínico..."', false)
             ->assertSee('data-sidebar-search-empty', false)
-            ->assertSee('class="sidebar-backdrop"', false);
+            ->assertSee('class="sidebar-backdrop"', false)
+            ->assertDontSee('Gestión Farmacéutica Prototipo');
     }
 
     public function test_sidebar_highlights_only_the_group_for_the_current_page(): void
@@ -551,7 +595,7 @@ class FarmaciaFlowsTest extends TestCase
         $this->get(route('patients.index'))
             ->assertOk()
             ->assertSee('class="nav-group " role="group" aria-labelledby="nav-group-main-title"', false)
-            ->assertSee('class="nav-group nav-group-active" role="group" aria-labelledby="nav-group-0-title"', false)
+            ->assertSee('class="nav-group nav-group-active" role="group" aria-labelledby="nav-group-pacientes-title"', false)
             ->assertSee('aria-current="false" data-search-text="inicio panel de control"', false);
 
         $this->get(route('dashboard'))
@@ -560,14 +604,54 @@ class FarmaciaFlowsTest extends TestCase
             ->assertSee('aria-current="page" data-search-text="inicio panel de control"', false)
             ->assertSee('>Personas autorizadas</span>', false)
             ->assertSee('>Pacientes inscritos</span>', false)
-            ->assertSee('>Abastecimiento farmacéutico</span>', false)
+            ->assertSee('>Abastecimiento y Ajustes Farmacéuticos</span>', false)
             ->assertSee('>Gestión de existencias</span>', false)
             ->assertSee('>Medicamentos e insumos</span>', false)
             ->assertSee('>Dispensación de medicamentos</span>', false)
             ->assertSee('>Historial de dispensaciones</span>', false)
             ->assertSee('>Informes de gestión</span>', false)
+            ->assertDontSee('Exportar movimientos')
             ->assertSee('>Administración del sistema</span>', false)
-            ->assertSee('>Alertas operativas</span>', false);
+            ->assertDontSee('>Alertas operativas</span>', false);
+
+        $this->get(route('alerts.map'))
+            ->assertOk()
+            ->assertSee('class="nav-group nav-group-active" role="group" aria-labelledby="nav-group-main-title"', false)
+            ->assertSee('aria-current="page" data-search-text="Principal Alertas operativas Mapa operativo', false);
+    }
+
+    public function test_sidebar_follows_the_requested_menu_order_and_nests_authorized_people_under_patients(): void
+    {
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                route('dashboard'),
+                route('alerts.map'),
+                route('alerts.history'),
+                route('dispensations.index'),
+                route('carts.usage.index'),
+                route('carts.paro.create'),
+                route('carts.unidosis.create'),
+                route('carts.unidosis.index'),
+                route('patients.index'),
+                route('patients.create'),
+                route('carts.treatments.create'),
+                route('programs.affiliations.index'),
+                route('authorized-people.index'),
+                route('programs.index'),
+                route('carts.index'),
+                route('inventory.index'),
+                route('inventory.adjustments.index'),
+                route('supplies.requests.index'),
+                route('supplies.requests.create'),
+                route('supplies.receive.form'),
+                route('supplies.index'),
+                route('professionals.index'),
+                route('users.index'),
+                route('reports.deliveries'),
+            ])
+            ->assertSee('>Personas autorizadas</span>', false)
+            ->assertDontSee('>Alertas operativas</span>', false);
     }
 
     public function test_demo_seeder_adds_example_data_and_is_idempotent(): void
@@ -599,7 +683,7 @@ class FarmaciaFlowsTest extends TestCase
             'inventario' => 'inventory.index',
             'carros' => 'carts.index',
             'dispensaciones' => 'dispensations.index',
-            'reportes' => 'reports.index',
+            'reportes' => 'reports.deliveries',
             'administracion' => 'users.index',
             'alertas' => 'alerts.map',
         ];
@@ -848,7 +932,8 @@ class FarmaciaFlowsTest extends TestCase
             ->assertSee('data-name="duracion_dias"', false)
             ->assertSee('data-name="frecuencia"', false)
             ->assertSee('data-name="cantidad_indicada"', false)
-            ->assertSee('data-name="es_sos"', false)
+            ->assertSee('data-toggle-sos-treatment', false)
+            ->assertDontSee('data-name="es_sos"', false)
             ->assertSee('data-name="indicaciones"', false);
         $dispensationForm->assertDontSee('Selecciona del catálogo completo');
         $this->get(route('dispensations.deliveries'))
@@ -2095,7 +2180,7 @@ class FarmaciaFlowsTest extends TestCase
         DB::table('pacientes')->where('rut', $patientId)->update(['activo' => false]);
         $productId = DB::table('productos')->where('numero_serie', 'MED-001')->value('producto_id');
         $programId = DB::table('programas_salud')->value('programa_id');
-        $professionalId = DB::table('profesionales_salud')->value('rut');
+        $professionalId = DB::table('personal_salud')->value('rut');
 
         $this->get(route('patients.index', ['buscar' => $patientId]))
             ->assertOk()
@@ -2132,9 +2217,9 @@ class FarmaciaFlowsTest extends TestCase
     public function test_inactive_professionals_cannot_be_selected_or_register_prescriptions(): void
     {
         $patientId = DB::table('pacientes')->where('rut', '123456785')->value('rut');
-        $professionalId = DB::table('profesionales_salud')->value('rut');
+        $professionalId = DB::table('personal_salud')->value('rut');
         $productId = DB::table('productos')->where('numero_serie', 'MED-001')->value('producto_id');
-        DB::table('profesionales_salud')->where('rut', $professionalId)->update(['activo' => false]);
+        DB::table('personal_salud')->where('rut', $professionalId)->update(['activo' => false]);
 
         $this->get(route('recipes.create'))
             ->assertOk()
@@ -2164,7 +2249,7 @@ class FarmaciaFlowsTest extends TestCase
     public function test_prescription_registration_saves_all_medicine_details(): void
     {
         $patientId = DB::table('pacientes')->where('rut', '123456785')->value('rut');
-        $professionalId = DB::table('profesionales_salud')->value('rut');
+        $professionalId = DB::table('personal_salud')->value('rut');
         $productId = DB::table('productos')->where('numero_serie', 'MED-001')->value('producto_id');
 
         $page = $this->get(route('recipes.create'))
@@ -2250,7 +2335,7 @@ class FarmaciaFlowsTest extends TestCase
     public function test_prescription_form_can_register_a_linked_treatment_inline(): void
     {
         $patientRut = DB::table('pacientes')->where('rut', '123456785')->value('rut');
-        $professionalRut = DB::table('profesionales_salud')->value('rut');
+        $professionalRut = DB::table('personal_salud')->value('rut');
         $productId = DB::table('productos')->where('numero_serie', 'MED-001')->value('producto_id');
         $startDate = now()->toDateString();
         $endDate = now()->addMonth()->toDateString();
@@ -2318,11 +2403,16 @@ class FarmaciaFlowsTest extends TestCase
         $this->assertArrayNotHasKey('stock_disponible', $response->json()[0]);
     }
 
-    public function test_sos_prescription_requires_explicit_sos_and_prints_its_maximum_quantity(): void
+    public function test_recipes_do_not_offer_sos_and_keep_duration_and_frequency_required(): void
     {
         $patientId = DB::table('pacientes')->where('rut', '123456785')->value('rut');
-        $professionalId = DB::table('profesionales_salud')->value('rut');
+        $professionalId = DB::table('personal_salud')->value('rut');
         $productId = DB::table('productos')->where('numero_serie', 'MED-001')->value('producto_id');
+        $this->get(route('recipes.create'))
+            ->assertOk()
+            ->assertDontSee('Tratamiento SOS')
+            ->assertDontSee('La cantidad prescrita será el máximo autorizado.')
+            ->assertDontSee('data-sos-treatment', false);
         $basePayload = [
             'paciente_rut' => $patientId,
             'profesional_rut' => $professionalId,
@@ -2342,33 +2432,48 @@ class FarmaciaFlowsTest extends TestCase
             ->assertSessionHasErrors('detalles.0.duracion_dias');
         $this->assertDatabaseCount('recetas', 0);
 
-        $this->post(route('recipes.store'), array_merge($basePayload, [
+        $this->from(route('recipes.index'))->post(route('recipes.store'), array_merge($basePayload, [
             'numero_receta' => 'REC-SOS-001',
             'detalles' => [[
                 'producto_id' => $productId,
                 'cantidad_indicada' => 10,
                 'unidades_por_toma' => 1,
+                'duracion_dias' => 10,
+                'frecuencia' => 'Cada 8 horas',
                 'es_sos' => true,
+            ]],
+        ]))->assertRedirect(route('recipes.index'))
+            ->assertSessionHasErrors('detalles.0.es_sos');
+
+        $this->post(route('recipes.store'), array_merge($basePayload, [
+            'numero_receta' => 'REC-NO-SOS-001',
+            'detalles' => [[
+                'producto_id' => $productId,
+                'cantidad_indicada' => 10,
+                'unidades_por_toma' => 1,
+                'duracion_dias' => 10,
+                'frecuencia' => 'Cada 8 horas',
             ]],
         ]))->assertRedirect(route('recipes.index'));
 
         $this->assertDatabaseHas('receta_detalle', [
             'producto_id' => $productId,
             'cantidad_indicada' => 10,
-            'frecuencia' => 'SOS',
-            'duracion_dias' => null,
-            'es_sos' => true,
+            'frecuencia' => 'Cada 8 horas',
+            'duracion_dias' => 10,
+            'es_sos' => false,
         ]);
-        $prescriptionId = DB::table('recetas')->where('numero_receta', 'REC-SOS-001')->value('receta_id');
+        $prescriptionId = DB::table('recetas')->where('numero_receta', 'REC-NO-SOS-001')->value('receta_id');
         $this->get(route('recipes.print', $prescriptionId))
             ->assertOk()
-            ->assertSee('SOS · máximo prescrito');
+            ->assertSee('10 días')
+            ->assertDontSee('SOS · máximo prescrito');
     }
 
     public function test_prescription_print_lists_all_dispensed_products_for_the_selected_order(): void
     {
         $patientId = DB::table('pacientes')->where('rut', '123456785')->value('rut');
-        $professionalId = DB::table('profesionales_salud')->value('rut');
+        $professionalId = DB::table('personal_salud')->value('rut');
         $products = DB::table('productos')->where('activo', true)->limit(2)->get(['producto_id', 'nombre']);
         $this->assertCount(2, $products);
 
@@ -2924,6 +3029,12 @@ class FarmaciaFlowsTest extends TestCase
         $this->get(route('reports.kardex'))
             ->assertOk()
             ->assertSee('Kardex de inventario histórico')
+            ->assertSeeInOrder([
+                'class="form-grid report-kardex-filters"',
+                'for="buscar-kardex"',
+                'for="desde"',
+                'for="hasta"',
+            ], false)
             ->assertSee('Imprimir CSV')
             ->assertDontSee('Imprimir / PDF')
             ->assertSee('KARDEX-DIRECT-001')
@@ -3109,7 +3220,15 @@ class FarmaciaFlowsTest extends TestCase
 
         $response = $this->get(route('products.stock', $productId));
         $response->assertOk()
+            ->assertSee('product-stock-navigation', false)
+            ->assertSee('href="'.route('inventory.index').'"', false)
+            ->assertSee('Volver al inventario')
+            ->assertSee('product-stock-summary', false)
+            ->assertSee('Stock disponible')
             ->assertSee('Stock registrado')
+            ->assertSee('Lotes registrados')
+            ->assertSee('Lotes y existencias por ubicación')
+            ->assertSee('Stock agrupado por ubicación')
             ->assertSee('450')
             ->assertSee('AMOX-LOT-NUEVO')
             ->assertSee('L260201')
@@ -3118,6 +3237,11 @@ class FarmaciaFlowsTest extends TestCase
             ->assertSee('Stock vencido')
             ->assertSee('Stock bloqueado')
             ->assertSee(now()->addMonths(18)->format('d/m/Y'));
+        $this->assertLessThan(
+            strpos($response->getContent(), 'Stock agrupado por ubicación'),
+            strpos($response->getContent(), 'Lotes y existencias por ubicación'),
+            'The FEFO lot table should appear before the location summary.'
+        );
 
         $inventoryResponse = $this->getJson(route('inventory.api.index'))
             ->assertOk()
@@ -3198,7 +3322,7 @@ class FarmaciaFlowsTest extends TestCase
             'ubicacion_id' => $locationId,
             'stock_minimo' => 12,
             'stock_maximo' => 40,
-        ])->assertRedirect(route('products.stock', $productId));
+        ])->assertRedirect(route('products.stock', $productId).'#stock-ubicacion-'.$locationId);
 
         $this->assertDatabaseHas('stock_minimos_ubicacion', [
             'producto_id' => $productId,
@@ -3219,6 +3343,7 @@ class FarmaciaFlowsTest extends TestCase
                 'stock_minimo' => 41,
                 'stock_maximo' => 40,
             ])
+            ->assertRedirect(route('products.stock', $productId).'#stock-ubicacion-'.$locationId)
             ->assertSessionHasErrors('stock_maximo');
 
         $this->assertDatabaseHas('stock_minimos_ubicacion', [
@@ -3297,6 +3422,181 @@ class FarmaciaFlowsTest extends TestCase
             ->assertSee('PAGE-STOCK-25')
             ->assertSee('Página 2 de 2')
             ->assertSee('420');
+    }
+
+    public function test_inventory_adjustment_lines_are_grouped_and_authorized_atomically(): void
+    {
+        $this->get(route('inventory.adjust.form'))
+            ->assertOk()
+            ->assertSee('data-add-row="adjustment-details"', false)
+            ->assertSee('id="adjustment-detail-template"', false)
+            ->assertSee('Buscar medicamento')
+            ->assertSee('data-adjustment-lot', false)
+            ->assertSee('existencia');
+
+        $inventories = DB::table('inventario')
+            ->join('lotes', 'lotes.lote_id', '=', 'inventario.lote_id')
+            ->join('productos', 'productos.producto_id', '=', 'lotes.producto_id')
+            ->where('productos.activo', true)
+            ->where('lotes.estado', 'ACTIVO')
+            ->whereDate('lotes.fecha_vencimiento', '>=', today()->toDateString())
+            ->where('inventario.cantidad', '>', 0)
+            ->orderBy('productos.producto_id')
+            ->get([
+                'productos.producto_id',
+                'inventario.lote_id',
+                'inventario.ubicacion_id',
+                'inventario.cantidad',
+            ])
+            ->unique('producto_id')
+            ->take(2)
+            ->values();
+        $this->assertCount(2, $inventories);
+
+        $makeDetails = fn (string $firstType, float $secondQuantity) => [
+            [
+                'producto_id' => $inventories[0]->producto_id,
+                'lote_id' => $inventories[0]->lote_id,
+                'ubicacion_id' => $inventories[0]->ubicacion_id,
+                'tipo_ajuste' => $firstType,
+                'cantidad' => 2,
+                'motivo' => 'Diferencia de inventario línea 1',
+            ],
+            [
+                'producto_id' => $inventories[1]->producto_id,
+                'lote_id' => $inventories[1]->lote_id,
+                'ubicacion_id' => $inventories[1]->ubicacion_id,
+                'tipo_ajuste' => 'SALIDA',
+                'cantidad' => $secondQuantity,
+                'motivo' => 'Diferencia de inventario línea 2',
+            ],
+        ];
+
+        $invalidDetails = $makeDetails('ENTRADA', 1);
+        $invalidDetails[0]['producto_id'] = $inventories[1]->producto_id;
+        $this->from(route('inventory.adjust.form'))
+            ->post(route('inventory.adjust'), ['detalles' => $invalidDetails])
+            ->assertRedirect(route('inventory.adjust.form'))
+            ->assertSessionHasErrors('detalles.0.lote_id');
+        $this->assertSame(0, DB::table('solicitudes_ajuste_grupos')->count());
+
+        $initialStock = $inventories->map(fn ($inventory) => (float) $inventory->cantidad);
+        $this->post(route('inventory.adjust'), ['detalles' => $makeDetails('ENTRADA', 1)])
+            ->assertRedirect(route('inventory.adjustments.index'));
+        $groupId = (int) DB::table('solicitudes_ajuste_grupos')->latest('grupo_ajuste_id')->value('grupo_ajuste_id');
+        $requestIds = DB::table('solicitudes_ajuste_inventario')
+            ->where('grupo_ajuste_id', $groupId)
+            ->orderBy('solicitud_ajuste_id')
+            ->pluck('solicitud_ajuste_id');
+        $this->assertCount(2, $requestIds);
+        $this->assertSame(2, DB::table('solicitudes_ajuste_inventario')
+            ->where('grupo_ajuste_id', $groupId)
+            ->where('estado', 'PENDIENTE')
+            ->count());
+        foreach ($inventories as $index => $inventory) {
+            $this->assertSame($initialStock[$index], (float) DB::table('inventario')
+                ->where('lote_id', $inventory->lote_id)
+                ->where('ubicacion_id', $inventory->ubicacion_id)
+                ->value('cantidad'));
+        }
+        $this->get(route('inventory.adjustments.index'))
+            ->assertOk()
+            ->assertSee('Diferencia de inventario línea 1')
+            ->assertSee('Diferencia de inventario línea 2')
+            ->assertSee('Ver solicitud')
+            ->assertSee('Autorizar o rechazar afecta todas las líneas');
+        $this->get(route('inventory.adjustments.show', $groupId))
+            ->assertOk()
+            ->assertSee('Solicitante:')
+            ->assertSee('Fecha de solicitud:')
+            ->assertSee('Medicamentos solicitados')
+            ->assertSee('Diferencia de inventario línea 1')
+            ->assertSee('Diferencia de inventario línea 2');
+
+        $pharmacistRut = '104333333';
+        DB::table('usuarios')->insert([
+            'rut' => $pharmacistRut,
+            'nombre' => 'QF',
+            'apellidoPaterno' => 'Autorizador',
+            'apellidoMaterno' => 'Grupo',
+            'telefono' => '900000003',
+            'password_hash' => Hash::make('UnaClaveSegura!2026'),
+            'activo' => true,
+        ]);
+        DB::table('usuario_rol')->insert([
+            'usuario_rut' => $pharmacistRut,
+            'rol_id' => DB::table('roles')->where('nombre', 'Químico Farmacéutico')->value('rol_id'),
+        ]);
+
+        $this->actingAs(Usuario::where('rut', $pharmacistRut)->firstOrFail())
+            ->get(route('inventory.adjustments.show', $groupId))
+            ->assertOk()
+            ->assertSee('Aprobar solicitud')
+            ->assertSee('Rechazar solicitud')
+            ->assertSee('Motivo del rechazo')
+            ->assertSee('required', false);
+        $this->actingAs(Usuario::where('rut', $pharmacistRut)->firstOrFail())
+            ->patch(route('inventory.adjustments.resolve', $requestIds[0]), ['decision' => 'APROBAR'])
+            ->assertRedirect(route('inventory.adjustments.index'));
+        $this->assertDatabaseHas('solicitudes_ajuste_grupos', [
+            'grupo_ajuste_id' => $groupId,
+            'estado' => 'APROBADA',
+        ]);
+        $this->assertSame(2, DB::table('solicitudes_ajuste_inventario')
+            ->where('grupo_ajuste_id', $groupId)
+            ->where('estado', 'APROBADA')
+            ->count());
+        $this->assertSame(2, DB::table('movimientos_inventario')
+            ->whereIn('referencia_id', $requestIds)
+            ->where('referencia_tipo', 'SOLICITUD_AJUSTE')
+            ->count());
+
+        $this->actingAs(Usuario::where('rut', '12345674')->firstOrFail());
+        $movementCount = DB::table('movimientos_inventario')->count();
+        $firstInventoryBefore = (float) DB::table('inventario')
+            ->where('lote_id', $inventories[0]->lote_id)
+            ->where('ubicacion_id', $inventories[0]->ubicacion_id)
+            ->value('cantidad');
+        $this->post(route('inventory.adjust'), [
+            'detalles' => $makeDetails('ENTRADA', (float) $inventories[1]->cantidad + 1),
+        ])->assertRedirect(route('inventory.adjustments.index'));
+        $secondGroupId = (int) DB::table('solicitudes_ajuste_grupos')->latest('grupo_ajuste_id')->value('grupo_ajuste_id');
+        $secondRequestId = (int) DB::table('solicitudes_ajuste_inventario')
+            ->where('grupo_ajuste_id', $secondGroupId)
+            ->orderBy('solicitud_ajuste_id')
+            ->value('solicitud_ajuste_id');
+
+        $this->actingAs(Usuario::where('rut', $pharmacistRut)->firstOrFail())
+            ->from(route('inventory.adjustments.index'))
+            ->patch(route('inventory.adjustments.resolve', $secondRequestId), ['decision' => 'APROBAR'])
+            ->assertRedirect(route('inventory.adjustments.index'))
+            ->assertSessionHasErrors('cantidad');
+        $this->assertSame($movementCount, DB::table('movimientos_inventario')->count());
+        $this->assertSame($firstInventoryBefore, (float) DB::table('inventario')
+            ->where('lote_id', $inventories[0]->lote_id)
+            ->where('ubicacion_id', $inventories[0]->ubicacion_id)
+            ->value('cantidad'));
+        $this->assertDatabaseHas('solicitudes_ajuste_grupos', [
+            'grupo_ajuste_id' => $secondGroupId,
+            'estado' => 'PENDIENTE',
+        ]);
+        $this->from(route('inventory.adjustments.show', $secondGroupId))
+            ->patch(route('inventory.adjustments.resolve', $secondRequestId), ['decision' => 'RECHAZAR'])
+            ->assertRedirect(route('inventory.adjustments.show', $secondGroupId))
+            ->assertSessionHasErrors('motivo_resolucion');
+        $this->patch(route('inventory.adjustments.resolve', $secondRequestId), [
+            'decision' => 'RECHAZAR',
+            'motivo_resolucion' => 'Revisión física requerida',
+        ])->assertRedirect(route('inventory.adjustments.index'));
+        $this->assertDatabaseHas('solicitudes_ajuste_grupos', [
+            'grupo_ajuste_id' => $secondGroupId,
+            'estado' => 'RECHAZADA',
+        ]);
+        $this->assertSame(2, DB::table('solicitudes_ajuste_inventario')
+            ->where('grupo_ajuste_id', $secondGroupId)
+            ->where('estado', 'RECHAZADA')
+            ->count());
+        $this->assertSame($movementCount, DB::table('movimientos_inventario')->count());
     }
 
     public function test_inventory_adjustments_are_transactional_audited_and_cannot_create_negative_stock(): void
@@ -4170,7 +4470,7 @@ class FarmaciaFlowsTest extends TestCase
             ->assertDontSee('Historial de Alertas')
             ->assertDontSee('Alerta asignada a otra persona');
         $this->get(route('alerts.history'))
-            ->assertRedirect(route('alerts.map'));
+            ->assertForbidden();
         $this->get(route('alerts.show', $assignedAlertId))->assertOk();
         $this->get(route('alerts.show', $otherAlertId))->assertNotFound();
     }
@@ -4433,6 +4733,10 @@ class FarmaciaFlowsTest extends TestCase
 
     public function test_report_exports_cover_deliveries_stock_controlled_movements_and_expiring_lots(): void
     {
+        $pharmacistRoleId = DB::table('roles')->where('nombre', 'Químico Farmacéutico')->value('rol_id');
+        DB::table('usuario_rol')->where('usuario_rut', '12345674')->update(['rol_id' => $pharmacistRoleId]);
+        $this->actingAs(Usuario::query()->findOrFail('12345674'));
+
         foreach ([
             'entregas' => ['reporte-entregas.csv', 'Paciente'],
             'existencias' => ['reporte-existencias.csv', 'Stock mínimo'],
@@ -4455,25 +4759,126 @@ class FarmaciaFlowsTest extends TestCase
         $date = now()->addDays(2)->toDateString();
         $nextDate = now()->addDays(3)->toDateString();
         $patientRut = DB::table('pacientes')->value('rut');
+        $productId = DB::table('productos')->where('numero_serie', 'MED-001')->value('producto_id');
+        $lotId = DB::table('lotes')->where('producto_id', $productId)->value('lote_id');
 
-        DB::table('entregas')->insert([
-            [
+        foreach ([$date.' 23:59:59', $nextDate.' 00:00:00'] as $deliveryDate) {
+            $deliveryId = DB::table('entregas')->insertGetId([
                 'paciente_rut' => $patientRut,
                 'usuario_rut' => auth()->id(),
-                'fecha_hora' => $date.' 23:59:59',
+                'fecha_hora' => $deliveryDate,
                 'estado' => 'CONFIRMADA',
             ],
-            [
-                'paciente_rut' => $patientRut,
-                'usuario_rut' => auth()->id(),
-                'fecha_hora' => $nextDate.' 00:00:00',
-                'estado' => 'CONFIRMADA',
-            ],
-        ]);
+            );
+            DB::table('entrega_detalle')->insert([
+                'entrega_id' => $deliveryId,
+                'lote_id' => $lotId,
+                'producto_id' => $productId,
+                'cantidad' => 1,
+            ]);
+        }
 
-        $this->getJson('/api/v1/reports?desde='.$date.'&hasta='.$date)
+        $this->getJson('/api/v1/reports/deliveries?desde='.$date.'&hasta='.$date)
             ->assertOk()
-            ->assertJsonPath('data.deliveryCount', 1);
+            ->assertJsonPath('data.deliveries.total', 1);
+    }
+
+    public function test_delivery_report_defaults_to_all_records_and_orders_search_before_dates(): void
+    {
+        $patientRut = DB::table('pacientes')->value('rut');
+        $productId = DB::table('productos')->where('numero_serie', 'MED-001')->value('producto_id');
+        $lotId = DB::table('lotes')->where('producto_id', $productId)->value('lote_id');
+        $deliveryIds = [];
+
+        foreach ([now()->subYears(2), now()->addYears(2)] as $date) {
+            $deliveryId = DB::table('entregas')->insertGetId([
+                'paciente_rut' => $patientRut,
+                'usuario_rut' => auth()->id(),
+                'fecha_hora' => $date,
+                'estado' => 'CONFIRMADA',
+            ]);
+            DB::table('entrega_detalle')->insert([
+                'entrega_id' => $deliveryId,
+                'lote_id' => $lotId,
+                'producto_id' => $productId,
+                'cantidad' => 1,
+            ]);
+            $deliveryIds[] = $deliveryId;
+        }
+
+        $this->get(route('reports.deliveries'))
+            ->assertOk()
+            ->assertDontSee('Filtrar período')
+            ->assertDontSee('Imprimir / PDF')
+            ->assertSee('Descargar CSV')
+            ->assertSeeInOrder([
+                'id="entregas-dispensaciones"',
+                'for="buscar-entrega"',
+                'for="desde"',
+                'for="hasta"',
+            ], false)
+            ->assertSee('2 líneas confirmadas')
+            ->assertViewHas('deliveries', fn ($deliveries) => $deliveries->total() === 2
+                && $deliveries->getCollection()->pluck('entrega_id')->all() === $deliveryIds);
+    }
+
+    public function test_delivery_csv_export_applies_search_and_date_filters(): void
+    {
+        $patients = DB::table('pacientes')->orderBy('rut')->limit(3)->get(['rut']);
+        $this->assertCount(3, $patients);
+        foreach ([
+            [$patients[0]->rut, 'CSV Incluido'],
+            [$patients[1]->rut, 'CSV Excluido por producto'],
+            [$patients[2]->rut, 'CSV Excluido por fecha'],
+        ] as [$patientRut, $name]) {
+            DB::table('pacientes')->where('rut', $patientRut)->update([
+                'nombre' => $name,
+                'apellidoPaterno' => 'Paciente',
+                'apellidoMaterno' => 'Filtro',
+            ]);
+        }
+
+        $productIds = DB::table('productos')
+            ->whereIn('numero_serie', ['MED-001', 'MED-002'])
+            ->pluck('producto_id', 'numero_serie');
+        $lotIds = DB::table('lotes')
+            ->whereIn('producto_id', $productIds->values())
+            ->pluck('lote_id', 'producto_id');
+        $date = now()->subDays(5)->toDateString();
+        $outsideDate = now()->subDays(6)->toDateString();
+        $deliveries = [
+            [$patients[0]->rut, $productIds['MED-001'], $date],
+            [$patients[1]->rut, $productIds['MED-002'], $date],
+            [$patients[2]->rut, $productIds['MED-001'], $outsideDate],
+        ];
+
+        foreach ($deliveries as [$patientRut, $productId, $deliveryDate]) {
+            $deliveryId = DB::table('entregas')->insertGetId([
+                'paciente_rut' => $patientRut,
+                'usuario_rut' => auth()->id(),
+                'fecha_hora' => $deliveryDate.' 12:00:00',
+                'estado' => 'CONFIRMADA',
+            ]);
+            DB::table('entrega_detalle')->insert([
+                'entrega_id' => $deliveryId,
+                'lote_id' => $lotIds[$productId],
+                'producto_id' => $productId,
+                'cantidad' => 1,
+            ]);
+        }
+
+        $csv = $this->get(route('reports.export', [
+            'tipo' => 'entregas',
+            'desde' => $date,
+            'hasta' => $date,
+            'buscar_entrega' => 'Paracetamol',
+        ]))
+            ->assertDownload('reporte-entregas.csv')
+            ->streamedContent();
+
+        $this->assertStringContainsString('CSV Incluido', $csv);
+        $this->assertStringNotContainsString('CSV Excluido por producto', $csv);
+        $this->assertStringNotContainsString('CSV Excluido por fecha', $csv);
     }
 
     public function test_report_category_stock_can_be_searched_and_filtered_by_availability(): void
@@ -4593,6 +4998,14 @@ class FarmaciaFlowsTest extends TestCase
             'tipo_movimiento' => 'SALIDA',
         ]))
             ->assertOk()
+            ->assertDontSee('Filtrar período')
+            ->assertSeeInOrder([
+                'id="movimientos-inventario"',
+                'for="buscar-movimiento"',
+                'for="tipo-movimiento"',
+                'for="desde"',
+                'for="hasta"',
+            ], false)
             ->assertSee('Paracetamol 500 mg')
             ->assertSee('SALIDA')
             ->assertViewHas('movements',  fn ($movements) => $movements->getCollection()
@@ -5718,7 +6131,6 @@ class FarmaciaFlowsTest extends TestCase
             ['duracion_dias' => 6] + array_diff_key($validDetail, ['duracion_dias' => true]),
             ['frecuencia' => 'Cada 12 horas'] + array_diff_key($validDetail, ['frecuencia' => true]),
             ['cantidad_indicada' => 6] + array_diff_key($validDetail, ['cantidad_indicada' => true]),
-            ['es_sos' => 1] + array_diff_key($validDetail, ['es_sos' => true]),
             ['indicaciones' => 'Tomar sin agua'] + array_diff_key($validDetail, ['indicaciones' => true]),
         ];
         $errorFields = [
@@ -5728,7 +6140,6 @@ class FarmaciaFlowsTest extends TestCase
             'duracion_dias',
             'frecuencia',
             'cantidad_indicada',
-            'es_sos',
             'indicaciones',
         ];
 
@@ -6022,6 +6433,67 @@ class FarmaciaFlowsTest extends TestCase
         $this->assertDatabaseCount('entregas', 0);
     }
 
+    public function test_sos_dispensing_can_be_recorded_without_a_prescription(): void
+    {
+        $patientId = DB::table('pacientes')->where('rut', '123456785')->value('rut');
+        $productId = DB::table('productos')->where('numero_serie', 'MED-001')->value('producto_id');
+        $locationId = DB::table('ubicaciones')->where('tipo', 'VITRINA')->value('ubicacion_id');
+        $this->get(route('dispensations.index'))
+            ->assertOk()
+            ->assertSee('data-toggle-sos-treatment', false)
+            ->assertSee('id="receta_id" name="receta_id" data-selected-recipe="" required disabled', false)
+            ->assertSee('id="persona_autorizada_id" name="persona_autorizada_id" disabled', false)
+            ->assertSee('data-toggle-authorized-person aria-controls="new-authorized-person" aria-expanded="false" disabled', false);
+        $lotId = DB::table('lotes')->insertGetId([
+            'producto_id' => $productId,
+            'numero_lote' => 'SOS-'.uniqid(),
+            'fecha_vencimiento' => now()->addYear()->toDateString(),
+        ]);
+        DB::table('inventario')->insert([
+            'lote_id' => $lotId,
+            'ubicacion_id' => $locationId,
+            'cantidad' => 5,
+        ]);
+
+        $this->post(route('dispensations.store'), [
+            'paciente_rut' => $patientId,
+            'tratamiento_sos' => 1,
+            'transcripcion_manual' => 1,
+            'detalles' => [[
+                'producto_id' => $productId,
+                'cantidad' => 2,
+            ]],
+        ])->assertRedirectContains(route('dispensations.index'))
+            ->assertRedirectContains('comprobante=');
+
+        $delivery = DB::table('entregas')->first();
+        $this->assertNotNull($delivery);
+        $this->assertNull($delivery->receta_id);
+        $this->assertTrue((bool) $delivery->es_sos);
+        $this->assertDatabaseHas('entrega_detalle', [
+            'entrega_id' => $delivery->entrega_id,
+            'producto_id' => $productId,
+            'cantidad' => 2,
+            'dosis' => null,
+            'horario' => 'SOS',
+            'indicaciones' => 'Tratamiento SOS',
+            'cantidad_indicada_snapshot' => null,
+            'duracion_dias_snapshot' => null,
+        ]);
+
+        $orderId = DB::table('ordenes_entrega')->where('entrega_id', $delivery->entrega_id)->value('orden_entrega_id');
+        $this->get(route('dispensations.index', ['comprobante' => $orderId]))
+            ->assertOk()
+            ->assertSee('<strong>SOS</strong>', false)
+            ->assertSee('Dispensación de emergencia SOS');
+        $this->get(route('delivery-orders.receipt', $orderId))
+            ->assertOk()
+            ->assertSee('Comprobante de Tratamiento SOS')
+            ->assertSee('TRATAMIENTO SOS')
+            ->assertSee('<strong>SOS</strong>', false)
+            ->assertSee('Paracetamol 500 mg');
+    }
+
     public function test_dispensing_is_blocked_when_the_patient_has_no_quota_left(): void
     {
         $patientId = DB::table('pacientes')->where('rut', '123456785')->value('rut');
@@ -6115,7 +6587,7 @@ class FarmaciaFlowsTest extends TestCase
     {
         $prescriptionId = DB::table('recetas')->insertGetId([
             'paciente_rut' => $patientId,
-            'profesional_rut' => DB::table('profesionales_salud')->value('rut'),
+            'profesional_rut' => DB::table('personal_salud')->value('rut'),
             'numero_receta' => 'REC-DELIVERY-'.uniqid(),
             'fecha_emision' => now()->toDateString(),
             'fecha_vencimiento' => now()->addMonth()->toDateString(),

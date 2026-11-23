@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('content')
     <x-page-header :title="in_array($screen, ['create', 'edit'], true) ? ($screen === 'edit' ? 'Editar programa' : 'Crear programa') : ($screen === 'enroll' ? 'Afiliar paciente' : ($screen === 'affiliations' ? 'Afiliaciones de pacientes' : 'Programas de Salud'))" description="Cobertura asistencial, pacientes inscritos y cuotas de dispensación">
-        <x-slot:actions>@if ($screen === 'programs')<a class="btn btn-primary" href="{{ route('programs.enroll.create') }}"><i class="fa-solid fa-user-plus"></i> Afiliar paciente</a>@endif</x-slot:actions>
+        <x-slot:actions>@if ($screen === 'programs' && $canEnroll)<a class="btn btn-primary" href="{{ route('programs.enroll.create') }}"><i class="fa-solid fa-user-plus"></i> Afiliar paciente</a>@endif</x-slot:actions>
     </x-page-header>
 
     @if ($screen === 'programs')

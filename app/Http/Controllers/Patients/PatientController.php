@@ -55,7 +55,7 @@ class PatientController extends Controller
     {
         $screen = $request->boolean('mostrar_formulario') ? 'create' : $request->route('screen', 'list');
         if ($screen === 'create') {
-            abort_unless(auth()->user()?->hasAnyRole(['Administrador']), 403);
+            abort_unless(auth()->user()?->hasPermission('patients.create'), 403);
 
             if ($request->expectsJson()) {
                 return response()->json(['data' => ['activePrograms' => []]]);
@@ -167,7 +167,7 @@ class PatientController extends Controller
     // Valida y guarda un nuevo registro.
     public function store(Request $request, AuditLogger $audit, PatientFileService $patientFiles): RedirectResponse|JsonResponse
     {
-        $this->authorizeAdministrator($audit, 'pacientes');
+        $this->authorizePermission('patients.create', $audit, 'pacientes');
         $request->merge([
             'rut' => Rut::limpiarRut((string) $request->input('rut', '')),
             'telefono' => ChileanMobilePhone::normalize($request->input('telefono')),
@@ -203,7 +203,7 @@ class PatientController extends Controller
 
     public function edit(string $patientRut, AuditLogger $audit, Request $request): View|JsonResponse
     {
-        $this->authorizeAdministrator($audit, 'pacientes', $patientRut);
+        $this->authorizePermission('patients.edit', $audit, 'pacientes', $patientRut);
         $patient = DB::table('pacientes')->where('rut', $patientRut)->first();
         abort_unless($patient, 404);
 
@@ -217,7 +217,7 @@ class PatientController extends Controller
     // Valida y actualiza el registro existente.
     public function update(Request $request, string $patientRut, AuditLogger $audit): RedirectResponse|JsonResponse
     {
-        $this->authorizeAdministrator($audit, 'pacientes', $patientRut);
+        $this->authorizePermission('patients.edit', $audit, 'pacientes', $patientRut);
         abort_unless(DB::table('pacientes')->where('rut', $patientRut)->exists(), 404);
         $request->merge([
             'rut' => Rut::limpiarRut((string) $request->input('rut', '')),

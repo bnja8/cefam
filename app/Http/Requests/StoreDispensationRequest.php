@@ -18,11 +18,13 @@ class StoreDispensationRequest extends FormRequest
 
     public function rules(): array
     {
+        $isSos = $this->boolean('tratamiento_sos');
         $rules = [
             'paciente_rut' => ['required', 'string', 'max:12', 'exists:pacientes,rut'],
-            'receta_id' => ['required', 'integer', 'exists:recetas,receta_id'],
-            'persona_autorizada_id' => ['nullable', 'integer', 'exists:personas_autorizadas,persona_autorizada_id'],
-            'nueva_persona_autorizada' => ['nullable', 'array:rut,nombre,apellidoPaterno,apellidoMaterno,vinculo'],
+            'tratamiento_sos' => ['sometimes', 'boolean'],
+            'receta_id' => [$isSos ? 'prohibited' : 'required', 'nullable', 'integer', 'exists:recetas,receta_id'],
+            'persona_autorizada_id' => [$isSos ? 'prohibited' : 'nullable', 'integer', 'exists:personas_autorizadas,persona_autorizada_id'],
+            'nueva_persona_autorizada' => [$isSos ? 'prohibited' : 'nullable', 'array:rut,nombre,apellidoPaterno,apellidoMaterno,vinculo'],
             'nueva_persona_autorizada.rut' => [
                 'required_with:nueva_persona_autorizada',
                 'string',
@@ -47,16 +49,15 @@ class StoreDispensationRequest extends FormRequest
             'detalles.*.indicaciones' => ['nullable', 'string', 'max:1000'],
         ];
 
-        if ($this->boolean('transcripcion_manual')) {
+        if ($this->boolean('transcripcion_manual') && ! $isSos) {
             $rules += [
                 'detalles.*.unidades_por_toma' => ['required', 'numeric', 'decimal:0,2', 'gt:0'],
                 'detalles.*.duracion_dias' => ['nullable', 'integer', 'min:1', 'max:365'],
                 'detalles.*.cantidad_indicada' => ['required', 'numeric', 'decimal:0,2', 'gt:0'],
-                'detalles.*.es_sos' => ['nullable', 'boolean'],
             ];
         }
 
-        if (! $this->expectsJson() && $this->boolean('transcripcion_manual')) {
+        if (! $this->expectsJson() && $this->boolean('transcripcion_manual') && ! $this->boolean('tratamiento_sos')) {
             $rules['confirmacion_receta'] = ['required', 'accepted'];
         }
 

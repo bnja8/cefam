@@ -7,7 +7,7 @@ use Illuminate\Validation\Validator;
 
 class ReceiveInventoryRequest extends InventoryRequest
 {
-    protected const AUTHORIZED_ROLES = ['Administrador', 'Químico Farmacéutico', 'Técnico Farmacéutico'];
+    protected const AUTHORIZED_PERMISSION = 'supplies.receive';
 
     protected const AUDIT_ENTITY = 'inventario';
 

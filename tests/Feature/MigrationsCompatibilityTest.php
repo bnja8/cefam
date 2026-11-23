@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Tests\TestCase;
 
 class MigrationsCompatibilityTest extends TestCase
@@ -61,6 +62,7 @@ class MigrationsCompatibilityTest extends TestCase
             'lotes',
             'notificaciones',
             'pacientes',
+            'personal_salud',
             'personas_autorizadas',
             'presentaciones_producto',
             'productos',
@@ -68,6 +70,7 @@ class MigrationsCompatibilityTest extends TestCase
             'recetas',
             'remesas',
             'solicitudes_ajuste_inventario',
+            'solicitudes_ajuste_grupos',
             'tratamientos',
             'unidades_medida',
             'usuarios',
@@ -76,6 +79,10 @@ class MigrationsCompatibilityTest extends TestCase
         }
 
         $this->assertTrue(Schema::hasView('vw_stock_producto_ubicacion'));
+        $this->assertFalse(Schema::hasTable('profesionales_salud'));
+        $this->assertTrue(Schema::hasColumn('personal_salud', 'usuario_rut'));
+        $this->assertTrue(Schema::hasTable('permissions'));
+        $this->assertTrue(Schema::hasColumn('solicitudes_ajuste_inventario', 'grupo_ajuste_id'));
         $this->assertDatabaseMissing('roles', ['nombre' => 'Administrador']);
         $this->assertDatabaseMissing('categorias_producto', ['nombre' => 'Medicamentos']);
         $this->assertDatabaseCount('formas_farmaceuticas', 0);
@@ -92,5 +99,101 @@ class MigrationsCompatibilityTest extends TestCase
         $this->assertTrue(Schema::hasTable('personas_autorizadas'));
         $this->assertTrue(Schema::hasColumn('entregas', 'paciente_nombre_snapshot'));
         $this->assertTrue(Schema::hasTable('jobs'));
+    }
+
+    public function test_legacy_staff_records_survive_the_table_rename(): void
+    {
+        $connectionName = 'staff_rename_test';
+        $connection = config('database.connections.sqlite');
+        $connection['database'] = ':memory:';
+        config(["database.connections.{$connectionName}" => $connection]);
+
+        try {
+            $baselinePath = array_map(
+                static fn (string $path): string => 'database'.DIRECTORY_SEPARATOR.'migrations'.DIRECTORY_SEPARATOR.basename($path),
+                glob(database_path('migrations/2026_09_08_*.php'))
+            );
+            $this->assertSame(0, Artisan::call('migrate:fresh', [
+                '--database' => $connectionName,
+                '--path' => $baselinePath,
+                '--force' => true,
+            ]), Artisan::output());
+
+            DB::connection($connectionName)->table('profesionales_salud')->insert([
+                'rut' => '123456785',
+                'nombre' => 'Camila',
+                'apellidoPaterno' => 'Fuentes',
+                'apellidoMaterno' => 'Soto',
+                'tipo_profesional' => 'Médico Cirujano',
+            ]);
+
+            $this->assertSame(0, Artisan::call('migrate', [
+                '--database' => $connectionName,
+                '--force' => true,
+            ]), Artisan::output());
+
+            $this->assertDatabaseHas('personal_salud', ['rut' => '123456785', 'nombre' => 'Camila'], $connectionName);
+            $this->assertFalse(Schema::connection($connectionName)->hasTable('profesionales_salud'));
+        } finally {
+            DB::purge($connectionName);
+        }
+    }
+
+    public function test_legacy_staff_rows_merge_when_an_imported_schema_already_has_the_new_table(): void
+    {
+        $connectionName = 'staff_merge_test';
+        $connection = config('database.connections.sqlite');
+        $connection['database'] = ':memory:';
+        config(["database.connections.{$connectionName}" => $connection]);
+
+        try {
+            $baselinePath = array_map(
+                static fn (string $path): string => 'database'.DIRECTORY_SEPARATOR.'migrations'.DIRECTORY_SEPARATOR.basename($path),
+                glob(database_path('migrations/2026_09_08_*.php'))
+            );
+            $this->assertSame(0, Artisan::call('migrate:fresh', [
+                '--database' => $connectionName,
+                '--path' => $baselinePath,
+                '--force' => true,
+            ]), Artisan::output());
+
+            Schema::connection($connectionName)->create('personal_salud', function (Blueprint $table): void {
+                $table->string('rut', 12)->primary();
+                $table->string('nombre', 50)->nullable();
+                $table->string('apellidoPaterno', 50);
+                $table->string('apellidoMaterno', 50);
+                $table->string('tipo_profesional', 50);
+                $table->boolean('activo')->default(true);
+            });
+            DB::connection($connectionName)->table('personal_salud')->insert([
+                'rut' => '111111111',
+                'nombre' => 'Imported',
+                'apellidoPaterno' => 'Staff',
+                'apellidoMaterno' => 'Member',
+                'tipo_profesional' => 'Médico Cirujano',
+            ]);
+            DB::connection($connectionName)->table('profesionales_salud')->insert([
+                'rut' => '222222222',
+                'nombre' => 'Legacy',
+                'apellidoPaterno' => 'Staff',
+                'apellidoMaterno' => 'Member',
+                'tipo_profesional' => 'Enfermera',
+            ]);
+
+            $this->assertSame(0, Artisan::call('migrate', [
+                '--database' => $connectionName,
+                '--force' => true,
+            ]), Artisan::output());
+
+            $this->assertDatabaseHas('personal_salud', ['rut' => '111111111'], $connectionName);
+            $this->assertDatabaseHas('personal_salud', ['rut' => '222222222'], $connectionName);
+            $this->assertFalse(Schema::connection($connectionName)->hasTable('profesionales_salud'));
+            $recipeForeignKeys = DB::connection($connectionName)->select("PRAGMA foreign_key_list('recetas')");
+            $this->assertTrue(collect($recipeForeignKeys)->contains(
+                static fn (object $foreignKey): bool => $foreignKey->table === 'personal_salud'
+            ));
+        } finally {
+            DB::purge($connectionName);
+        }
     }
 }

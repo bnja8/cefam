@@ -141,9 +141,10 @@ class WebAndApiTest extends TestCase
             ->assertOk()
             ->assertJsonStructure(['data' => ['alerts' => ['data', 'current_page', 'last_page', 'total'], 'locations', 'alertSummary']]);
 
-        $this->getJson('/api/v1/reports')
+        $this->getJson('/api/v1/reports/deliveries')
             ->assertOk()
-            ->assertJsonStructure(['data' => ['screen', 'deliveryCount', 'movementCount', 'availableStock']]);
+            ->assertJsonPath('data.screen', 'deliveries')
+            ->assertJsonStructure(['data' => ['deliveries' => ['data', 'current_page', 'total']]]);
 
         $this->getJson('/api/v1/reports/movements?desde=2026-01-01')
             ->assertOk()
@@ -190,7 +191,7 @@ class WebAndApiTest extends TestCase
         DB::table('usuario_rol')->insert(['usuario_rut' => $technician->rut, 'rol_id' => $technicianRole]);
         $this->actingAs($technician);
 
-        $this->getJson('/api/v1/reports')->assertForbidden();
+        $this->getJson('/api/v1/reports/deliveries')->assertForbidden();
         $this->getJson('/api/v1/alerts/history')->assertForbidden();
     }
 }

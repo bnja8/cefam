@@ -80,7 +80,7 @@
     <section class="card" id="nuevo-personal">
         <div class="card-header"><h2 class="card-title"><i class="fa-solid fa-user-plus text-primary"></i> Registrar personal de salud</h2></div>
         <div class="card-body">
-            <form action="{{ route('professionals.store') }}" method="post" class="form-grid" data-person-lookup data-person-lookup-url="{{ route('people.lookup') }}" data-person-type="profesionales_salud">
+            <form action="{{ route('professionals.store') }}" method="post" class="form-grid" data-person-lookup data-person-lookup-url="{{ route('people.lookup') }}" data-person-type="personal_salud">
                 @csrf
                 <div class="form-group"><label for="rut-personal">RUT *</label><input class="form-control" id="rut-personal" name="rut" value="{{ old('rut') }}" required maxlength="12" placeholder="12.345.678-9" data-rut-input data-person-rut aria-describedby="rut-personal-error"><small id="rut-personal-error" class="field-error" data-rut-error aria-live="polite"></small><small data-person-lookup-status aria-live="polite"></small></div>
                 <div class="form-group"><label for="nombre-personal">Nombre *</label><input class="form-control" id="nombre-personal" name="nombre" value="{{ old('nombre') }}" required maxlength="50"></div>
@@ -95,6 +95,7 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="form-group"><label for="especialidad-personal">Especialidad</label><input class="form-control" id="especialidad-personal" name="especialidad" value="{{ old('especialidad') }}" maxlength="100"></div>
                 <div class="form-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Guardar personal</button></div>
             </form>
         </div>

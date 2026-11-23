@@ -12,6 +12,9 @@ class MedicationFrequency
         if ($frequency === '') {
             return '—';
         }
+        if (strcasecmp($frequency, 'SOS') === 0) {
+            return 'SOS';
+        }
 
         if (preg_match('/^(?:cada\s*)?(\d+(?:[.,]\d+)?)\s*(?:h|horas?)?$/iu', $frequency, $matches)) {
             return 'Cada '.str_replace(',', '.', $matches[1]).' horas';

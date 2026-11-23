@@ -19,8 +19,6 @@ use Illuminate\Validation\ValidationException;
 
 class SupplyReceiptAction
 {
-    private const SUPPLY_OPERATORS = ['Administrador', 'Químico Farmacéutico', 'Técnico Farmacéutico'];
-
     public function receive(
         Request $request,
         AuditLogger $audit,
@@ -28,7 +26,7 @@ class SupplyReceiptAction
         InventoryQuantityConverter $quantityConverter,
         InventoryKardexService $kardex
     ): RedirectResponse|JsonResponse {
-        $this->authorizeSupplyOperation($audit, 'remesas');
+        $this->authorizeSupplyOperation($audit, 'supplies.receive', 'remesas');
         $data = $request->validate([
             'codigo_remesa' => ['required', 'string', 'max:100', Rule::unique('remesas', 'codigo_remesa')],
             'origen' => ['required', 'string', 'max:150'],
@@ -276,10 +274,10 @@ class SupplyReceiptAction
         return redirect()->route('supplies.index')->with('status', 'Remesa registrada correctamente.');
     }
 
-    private function authorizeSupplyOperation(AuditLogger $audit, string $entity): void
+    private function authorizeSupplyOperation(AuditLogger $audit, string $permission, string $entity): void
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(self::SUPPLY_OPERATORS)) {
+        if (! $user instanceof Usuario || ! $user->hasPermission($permission)) {
             $audit->record('ACCESO_DENEGADO', $entity, null, 'RECHAZADO');
             abort(403);
         }

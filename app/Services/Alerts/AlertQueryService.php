@@ -179,6 +179,7 @@ class AlertQueryService
         return DB::table('usuarios')
             ->join('usuario_rol', 'usuario_rol.usuario_rut', '=', 'usuarios.rut')
             ->join('roles', 'roles.rol_id', '=', 'usuario_rol.rol_id')
+            ->where('roles.activo', true)
             ->whereIn('roles.nombre', $roles)
             ->where('usuarios.activo', true)
             ->distinct()

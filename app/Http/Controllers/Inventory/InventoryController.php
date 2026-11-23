@@ -24,27 +24,27 @@ class InventoryController extends Controller
         abort_unless($user instanceof Usuario, 401);
 
         $filters = $request->validated();
-        $canManageCatalog = $user->hasAnyRole(['Administrador']);
-        $canManageCategories = $user->hasAnyRole(['Administrador', 'Químico Farmacéutico']);
+        $canManageCatalog = $user->hasPermission('inventory.products.manage');
+        $canViewProductCatalog = $user->hasPermission('inventory.products.view');
+        $canManageCategories = $user->hasPermission('inventory.catalog.manage');
+        $canViewCategories = $user->hasPermission('inventory.catalog.view');
         $productStock = $inventory->products($filters['buscar'] ?? null, $filters['buscar_global'] ?? null)
             ->withQueryString();
         $stockSummary = $inventory->productSummary();
         $lowStockCount = $alerts->refreshConfiguredStockAlerts()->count();
-        $locations = $canManageCategories ? $inventory->locations() : collect();
+        $locations = $canViewCategories ? $inventory->locations() : collect();
 
         return view('inventory.index', [
             'screen' => 'stock',
             'productStock' => $productStock,
             'stockSummary' => $stockSummary,
             'filters' => $filters,
+            'canViewProductCatalog' => $canViewProductCatalog,
             'canManageCatalog' => $canManageCatalog,
+            'canViewCategories' => $canViewCategories,
             'canManageCategories' => $canManageCategories,
-            'canRequestAdjustments' => $user->hasAnyRole([
-                'Administrador',
-                'Químico Farmacéutico',
-                'Técnico Farmacéutico',
-            ]),
-            'canTransferStock' => $user->hasAnyRole(['Administrador', 'Químico Farmacéutico']),
+            'canRequestAdjustments' => $user->hasPermission('inventory.adjust.request'),
+            'canTransferStock' => $user->hasPermission('inventory.transfer'),
             'locations' => $locations,
             'lowStockCount' => $lowStockCount,
         ]);
@@ -124,8 +124,8 @@ class InventoryController extends Controller
         return view('inventory.product-stock', [
             ...$data,
             'lots' => $data['lots']->withQueryString(),
-            'canManageCatalog' => $user->hasAnyRole(['Administrador']),
-            'canManageStockLimits' => $user->hasAnyRole(['Administrador', 'Químico Farmacéutico']),
+            'canManageCatalog' => $user->hasPermission('inventory.products.manage'),
+            'canManageStockLimits' => $user->hasPermission('inventory.limits.manage'),
         ]);
     }
 

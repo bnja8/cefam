@@ -34,7 +34,7 @@ class PatientFileController extends Controller
         $recordArchiver->archiveExpired();
 
         $prescriptions = DB::table('recetas')
-            ->join('profesionales_salud', 'profesionales_salud.rut', '=', 'recetas.profesional_rut')
+            ->join('personal_salud', 'personal_salud.rut', '=', 'recetas.profesional_rut')
             ->where('recetas.ficha_id', $fichaId)
             ->orderByDesc('recetas.fecha_registro')
             ->orderByDesc('recetas.receta_id')
@@ -47,7 +47,7 @@ class PatientFileController extends Controller
                 'recetas.tipo_receta',
                 'recetas.estado',
                 'recetas.estado_ficha',
-                PersonName::expression('profesionales_salud', 'profesional'),
+                PersonName::expression('personal_salud', 'profesional'),
             ]);
         $prescriptionDetails = DB::table('receta_detalle')
             ->join('productos', 'productos.producto_id', '=', 'receta_detalle.producto_id')

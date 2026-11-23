@@ -48,7 +48,7 @@
                         <li>{{ $message }}</li>
                     @endforeach
                 </ul>
-            @else
+            @elseif ($notification['message'] !== $notification['title'])
                 <p>{{ $notification['message'] }}</p>
             @endif
         </div>

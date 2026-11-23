@@ -24,7 +24,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    color: #a2464c;
+    color: var(--primary);
     background: #fce9e9;
     font-size: 13px;
     font-weight: 700;
@@ -33,7 +33,7 @@
 .person-card-title h3 {
     margin: 0;
     overflow: hidden;
-    color: #263d4c;
+    color: var(--text);
     font-size: 14px;
     font-weight: 650;
     line-height: 1.4;
@@ -42,7 +42,7 @@
 .person-card-title p {
     margin: 3px 0 0;
     overflow: hidden;
-    color: #71808c;
+    color: var(--muted);
     font-size: 11.5px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -52,10 +52,10 @@
 .person-card-status .badge-success { color: #286347; background: #eaf5ee; }
 .person-card-status .badge-danger { color: #a2464c; background: #fbefef; }
 .person-card-status-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; }
-.person-card-details { display: grid; gap: 10px; margin-top: 12px; color: #596c79; font-size: 12px; }
+.person-card-details { display: grid; gap: 10px; margin-top: 12px; color: var(--muted); font-size: 12px; }
 .person-card-meta-row { min-width: 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
 .person-card-meta-row > i { width: 15px; flex: 0 0 15px; margin-top: 2px; color: #82909b; text-align: center; }
-.person-card-meta-row strong { color: #415665; font-weight: 550; overflow-wrap: anywhere; }
+.person-card-meta-row strong { color: var(--text); font-weight: 550; overflow-wrap: anywhere; }
 .person-card-programs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .person-card-programs .badge { white-space: normal; }
 .person-card-actions {
@@ -70,12 +70,12 @@
 .person-card-actions > .btn { padding-right: 10px; padding-left: 10px; }
 .person-card-actions > form { margin: 0; }
 .person-card-actions > form .btn { width: 100%; }
-.person-card-unavailable { color: #81909b; font-size: 11px; }
+.person-card-unavailable { color: var(--muted); font-size: 11px; }
 .person-card-authorized-people { display: grid; gap: 7px; margin-top: 2px; padding-top: 10px; border-top: 1px solid var(--border); }
-.person-card-authorized-heading { color: #415665; font-size: 11px; font-weight: 650; }
+.person-card-authorized-heading { color: var(--text); font-size: 11px; font-weight: 650; }
 .person-card-authorized-person { min-width: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .person-card-authorized-person-copy { min-width: 0; display: grid; gap: 2px; }
-.person-card-authorized-person-copy strong { overflow-wrap: anywhere; color: #415665; font-size: 11px; }
+.person-card-authorized-person-copy strong { overflow-wrap: anywhere; color: var(--text); font-size: 11px; }
 .person-card-authorized-person-copy small { color: var(--muted); font-size: 10px; }
 .person-card-authorized-people > .text-link { font-size: 11px; }
 .prescription-card-medicines > summary { cursor: pointer; }
@@ -87,8 +87,8 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     background: #f8fafb;
-    color: #596c79;
+    color: var(--muted);
     font-size: 11px;
     line-height: 1.5;
 }
-.prescription-card-medicine strong { color: #415665; font-size: 12px; }
+.prescription-card-medicine strong { color: var(--text); font-size: 12px; }

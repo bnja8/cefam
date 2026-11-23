@@ -16,13 +16,15 @@ use Illuminate\View\View;
 
 class SupplyIndexAction
 {
-    private const SUPPLY_OPERATORS = ['Administrador', 'Químico Farmacéutico', 'Técnico Farmacéutico'];
-
     public function index(Request $request, AuditLogger $audit): View|JsonResponse
     {
         $screen = $request->route('screen', 'shipments');
         if ($screen === 'request-create' || $screen === 'receive') {
-            $this->authorizeSupplyOperation($audit, $screen === 'receive' ? 'remesas' : 'solicitudes_reposicion');
+            $this->authorizeSupplyOperation(
+                $audit,
+                $screen === 'receive' ? 'supplies.receive' : 'supplies.request',
+                $screen === 'receive' ? 'remesas' : 'solicitudes_reposicion'
+            );
         }
 
         if ($screen === 'request-create') {
@@ -106,6 +108,7 @@ class SupplyIndexAction
                 'screen' => 'requests',
                 'requestFilters' => $requestFilters,
                 'reorderRequests' => $reorderRequests,
+                'canRequest' => Auth::user()?->hasPermission('supplies.request') ?? false,
             ]);
         }
 
@@ -170,6 +173,7 @@ class SupplyIndexAction
             'screen' => $screen,
             'shipments' => $shipments,
             'shipmentFilters' => $shipmentFilters,
+            'canReceive' => Auth::user()?->hasPermission('supplies.receive') ?? false,
         ]);
     }
 
@@ -188,10 +192,10 @@ class SupplyIndexAction
         return $products;
     }
 
-    private function authorizeSupplyOperation(AuditLogger $audit, string $entity): void
+    private function authorizeSupplyOperation(AuditLogger $audit, string $permission, string $entity): void
     {
         $user = Auth::user();
-        if (! $user instanceof Usuario || ! $user->hasAnyRole(self::SUPPLY_OPERATORS)) {
+        if (! $user instanceof Usuario || ! $user->hasPermission($permission)) {
             $audit->record('ACCESO_DENEGADO', $entity, null, 'RECHAZADO');
             abort(403);
         }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Search;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use App\Support\People\Rut;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,12 +22,23 @@ class PersonLookupController extends Controller
         }
 
         $records = [];
+        $user = $request->user();
+        $tablePermissions = [
+            'usuarios' => 'users.view',
+            'pacientes' => 'patients.view',
+            'personal_salud' => 'personal.view',
+            'personas_autorizadas' => 'authorized-people.view',
+        ];
         foreach ([
             'usuarios' => ['rut', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'telefono'],
             'pacientes' => ['rut', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'fecha_nacimiento', 'telefono'],
-            'profesionales_salud' => ['rut', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'tipo_profesional'],
+            'personal_salud' => ['rut', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'tipo_profesional'],
             'personas_autorizadas' => ['rut', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'vinculo'],
         ] as $table => $columns) {
+            if (! $user instanceof Usuario || ! $user->hasPermission($tablePermissions[$table])) {
+                continue;
+            }
+
             $query = DB::table($table)->where('rut', $rut);
             if ($table === 'personas_autorizadas') {
                 $query->orderBy('persona_autorizada_id');

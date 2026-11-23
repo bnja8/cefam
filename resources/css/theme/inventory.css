@@ -3,18 +3,175 @@
 .product-alert-card { border-color: #d7e1e8; border-radius: 6px; box-shadow: 0 1px 2px rgba(16,45,62,.025); }
 .inventory-principle { align-items: flex-start; padding: 15px 17px; margin: 0 0 18px; border: 1px solid #d3e0e8; border-left: 4px solid #0b5578; border-radius: 5px; background: #fff; }
 .inventory-principle-icon { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 5px; color: #0b5578; background: #edf4f8; }
-.inventory-principle strong { display: block; margin: 1px 0 4px; color: #203f54; font-size: 13px; }
-.inventory-principle p { margin: 0; color: #647789; font-size: 12px; line-height: 1.55; }
+.inventory-principle strong { display: block; margin: 1px 0 4px; color: var(--text); font-size: 13px; }
+.inventory-principle p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
 .inventory-metrics-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
 .inventory-card { overflow: hidden; }
 .inventory-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 17px; border-bottom: 1px solid #dce4ea; background: #fff; }
 .inventory-search { position: relative; display: block; width: min(100%,520px); }
-.inventory-search > i { position: absolute; z-index: 1; top: 50%; left: 12px; transform: translateY(-50%); color: #7d8e9a; font-size: 13px; }
+.inventory-search > i { position: absolute; z-index: 1; top: 50%; left: 12px; transform: translateY(-50%); color: var(--muted); font-size: 13px; }
 .inventory-search input { padding-left: 35px; }
 .inventory-result-count { white-space: nowrap; }
 .inventory-status { margin: 0; padding: 0 17px; }
 .inventory-status:empty { display: none; }
 .inventory-table { min-width: 1080px; }
 .inventory-table td { padding: 13px 14px; }
-.inventory-table td:first-child strong { color: #263f4e; }
-.inventory-count-pill { display: inline-flex; padding: 4px 7px; border: 1px solid #dce7ed; border-radius: 3px; color: #38596d; background: #eef4f7; font-size: 11px; }
+.inventory-table td:first-child strong { color: var(--text); }
+.inventory-count-pill { display: inline-flex; padding: 4px 7px; border: 1px solid #dce7ed; border-radius: 3px; color: var(--primary-dark); background: #eef4f7; font-size: 11px; }
+
+.product-stock-page { display: grid; gap: 18px; }
+.product-stock-navigation { display: flex; align-items: center; margin: 2px 0 4px; }
+.product-stock-navigation .btn { min-height: 38px; padding: 8px 13px; }
+.product-stock-context { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; color: var(--muted); font-size: 11px; }
+.product-stock-context > span:not(.badge) { display: inline-flex; align-items: center; gap: 5px; }
+.product-stock-context > span + span:not(.badge)::before { width: 3px; height: 3px; margin-right: 3px; border-radius: 50%; background: #a7b5be; content: ""; }
+.product-stock-context strong { color: var(--text); }
+.product-stock-code { padding: 4px 8px; border: 1px solid #dce7ed; border-radius: 999px; color: var(--primary-dark); background: #f4f8fa; font-family: var(--font-family-institutional); font-weight: 650; }
+.product-stock-code i { color: var(--primary); }
+.product-stock-context .badge { margin-left: 4px; }
+.product-stock-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.product-stock-summary-card { min-width: 0; display: grid; gap: 12px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.product-stock-summary-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.product-stock-summary-icon { display: inline-grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border: 1px solid #dce7ed; border-radius: 10px; color: var(--primary); background: #f0f7fa; font-size: 14px; }
+.product-stock-summary-icon.is-danger { border-color: #f1d9db; color: #a2464c; background: #fbefef; }
+.product-stock-summary-icon.is-neutral { color: #647684; background: #f3f6f8; }
+.product-stock-summary-value { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; color: var(--text); }
+.product-stock-summary-value strong { font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1; }
+.product-stock-summary-value span { color: var(--muted); font-size: 11px; font-weight: 600; }
+.product-stock-summary-card p { margin: -5px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.product-stock-section { margin-bottom: 0; }
+.product-stock-section-header { align-items: center; flex-wrap: wrap; gap: 12px; }
+.product-stock-section-heading { min-width: 0; display: flex; flex: 1; align-items: center; flex-wrap: wrap; gap: 10px; }
+.product-stock-section-heading > i { display: inline-grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 10px; color: var(--primary); background: #edf4f8; }
+.product-stock-section-heading > div { min-width: 0; }
+.product-stock-section-heading .card-title { margin: 0; }
+.product-stock-section-heading p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.product-stock-record-count { color: var(--muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.product-stock-section-intro { padding: 10px 18px; border-bottom: 1px solid #edf1f4; color: var(--muted); background: #f8fafc; font-size: 10.5px; line-height: 1.5; }
+.product-stock-section-intro strong { color: var(--text); }
+.product-stock-lot-table { min-width: 1080px; }
+.product-stock-location-table { min-width: 1220px; }
+.product-stock-location-table.has-actions { min-width: 1470px; }
+.product-stock-lot-table td,
+.product-stock-location-table td { vertical-align: middle; }
+.product-stock-lot-table td:first-child strong,
+.product-stock-lot-table td:nth-child(8) strong,
+.product-stock-location-table td:first-child strong,
+.product-stock-location-table td:nth-child(3) strong { color: var(--text); }
+.product-stock-limit-form { min-width: 220px; display: grid; grid-template-columns: repeat(2, minmax(78px, 1fr)); align-items: end; gap: 6px; }
+.product-stock-limit-form .form-group label { margin-bottom: 3px; font-size: 9px; }
+.product-stock-limit-form .form-control { min-height: 32px; padding: 5px 7px; font-size: 11px; }
+.product-stock-limit-form .btn { grid-column: 1 / -1; justify-self: end; }
+
+.product-stock-lot-table tbody tr,
+.product-stock-location-table tbody tr { transition: background-color .15s ease; }
+.product-stock-lot-table tbody tr:nth-child(even),
+.product-stock-location-table tbody tr:nth-child(even) { background: #fbfcfd; }
+.product-stock-lot-table tbody tr:hover,
+.product-stock-location-table tbody tr:hover { background: #f4f8fa; }
+.product-stock-lot-table td[data-label="Cantidad"],
+.product-stock-location-table td[data-label="Disponible"] { font-size: 15px; }
+.product-stock-lot-table td[data-label="Cantidad"] strong,
+.product-stock-location-table td[data-label="Disponible"] strong { font-variant-numeric: tabular-nums; }
+.product-stock-lot-table .badge,
+.product-stock-location-table .badge { white-space: nowrap; }
+
+@media (max-width: 1050px) {
+    .product-stock-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+    .product-stock-summary { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .product-stock-summary-card { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; }
+    .product-stock-summary-label { grid-column: 1 / -1; }
+    .product-stock-summary-value { grid-column: 1; }
+    .product-stock-summary-card p { grid-column: 1 / -1; margin-top: 0; }
+    .product-stock-section-heading { align-items: flex-start; }
+    .product-stock-section-heading .badge { white-space: normal; }
+    .product-stock-section-intro { padding: 10px 14px; }
+    .product-stock-section-header { align-items: flex-start; }
+    .product-stock-record-count { width: 100%; }
+}
+
+@media (max-width: 760px) {
+    .product-stock-page { gap: 14px; }
+    .product-stock-navigation { margin: 0 0 2px; }
+    .product-stock-context { margin: 0; }
+    .product-stock-section-heading { flex-basis: 100%; }
+    .product-stock-section-heading > i { align-self: flex-start; }
+
+    .product-stock-lot-table,
+    .product-stock-location-table {
+        min-width: 0;
+        display: block;
+        border: 0;
+    }
+    .product-stock-lot-table thead,
+    .product-stock-location-table thead { display: none; }
+    .product-stock-lot-table tbody,
+    .product-stock-location-table tbody {
+        display: grid;
+        gap: 12px;
+        padding: 12px;
+    }
+    .product-stock-lot-table tbody tr,
+    .product-stock-location-table tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0;
+        overflow: hidden;
+        border: 1px solid #dfe8ee;
+        border-radius: 12px;
+        background: #fff;
+    }
+    .product-stock-lot-table td,
+    .product-stock-location-table td {
+        min-width: 0;
+        display: flex;
+        min-height: 58px;
+        align-items: flex-start;
+        flex-direction: column;
+        justify-content: center;
+        padding: 9px 12px;
+        border-bottom: 1px solid #edf2f5;
+        border-right: 1px solid #edf2f5;
+        line-height: 1.35;
+    }
+    .product-stock-lot-table td::before,
+    .product-stock-location-table td::before {
+        margin-bottom: 4px;
+        color: #7b8e9a;
+        content: attr(data-label);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+    .product-stock-lot-table td:nth-child(2n),
+    .product-stock-location-table td:nth-child(2n) { border-right: 0; }
+    .product-stock-lot-table td:nth-last-child(-n+2),
+    .product-stock-location-table td:nth-last-child(-n+2) { border-bottom: 0; }
+    .product-stock-lot-table td[data-label="Lote"],
+    .product-stock-location-table td[data-label="Ubicación"] {
+        grid-column: 1 / -1;
+        min-height: 64px;
+        border-right: 0;
+        background: #f7fafb;
+        font-size: 15px;
+    }
+    .product-stock-lot-table td[data-label="Cantidad"],
+    .product-stock-location-table td[data-label="Disponible"] {
+        border-right: 0;
+        font-size: 17px;
+    }
+    .product-stock-lot-table td[data-label="Acción"],
+    .product-stock-location-table td[data-label="Configurar"] {
+        align-items: stretch;
+    }
+    .product-stock-lot-table td[data-label="Acción"] .btn,
+    .product-stock-location-table td[data-label="Configurar"] .btn { width: 100%; }
+    .product-stock-location-table td[data-label="Estado"],
+    .product-stock-location-table td[data-label="Faltante al mínimo"] { border-bottom: 0; }
+    .product-stock-location-table.has-actions td[data-label="Estado"] { border-bottom: 1px solid #edf2f5; }
+    .product-stock-location-table.has-actions td[data-label="Configurar"] { grid-column: 1 / -1; border-right: 0; }
+    .product-stock-limit-form { min-width: 0; width: 100%; }
+}

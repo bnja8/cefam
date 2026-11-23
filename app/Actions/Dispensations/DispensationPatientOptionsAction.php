@@ -15,7 +15,7 @@ class DispensationPatientOptionsAction
 
         $today = now()->toDateString();
         $recipes = DB::table('recetas')
-            ->join('profesionales_salud', 'profesionales_salud.rut', '=', 'recetas.profesional_rut')
+            ->join('personal_salud', 'personal_salud.rut', '=', 'recetas.profesional_rut')
             ->leftJoin('tratamientos', 'tratamientos.receta_id', '=', 'recetas.receta_id')
             ->where('recetas.paciente_rut', $patientRut)
             ->where('recetas.estado', 'VIGENTE')
@@ -33,7 +33,7 @@ class DispensationPatientOptionsAction
                 'tratamientos.fecha_inicio as tratamiento_fecha_inicio',
                 'tratamientos.fecha_termino as tratamiento_fecha_termino',
                 'tratamientos.activo as tratamiento_activo',
-                PersonName::expression('profesionales_salud', 'profesional'),
+                PersonName::expression('personal_salud', 'profesional'),
             ]);
 
         $monthStart = now()->startOfMonth()->startOfDay();
