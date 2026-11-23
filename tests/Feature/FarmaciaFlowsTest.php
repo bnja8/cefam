@@ -654,6 +654,24 @@ class FarmaciaFlowsTest extends TestCase
             ->assertDontSee('>Alertas operativas</span>', false);
     }
 
+    public function test_sidebar_does_not_repeat_routes_between_menu_groups(): void
+    {
+        $navigation = app(\App\Http\Controllers\Modules\ModuleHubController::class)
+            ->navigationFor(auth()->user());
+
+        $routes = collect($navigation['principal_items'])
+            ->pluck('route')
+            ->merge(collect($navigation['groups'])->flatMap(static function (array $group): array {
+                return collect($group['items'])->pluck('route')
+                    ->merge(collect($group['subsections'])->flatMap(
+                        static fn (array $subsection) => collect($subsection['items'])->pluck('route')
+                    ))
+                    ->all();
+            }));
+
+        $this->assertCount($routes->unique()->count(), $routes);
+    }
+
     public function test_demo_seeder_adds_example_data_and_is_idempotent(): void
     {
         $this->seed(DemoDataSeeder::class);

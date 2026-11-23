@@ -257,7 +257,6 @@ class ModuleHubController extends Controller
             ]]),
             $group('programas', $modules['programas']['title'], $items('programas', [
                 'programs.index',
-                'programs.affiliations.index',
                 'programs.enroll.create',
                 'programs.create',
             ]), self::ACTIVE_ROUTE_PATTERNS['programas']),

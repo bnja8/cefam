@@ -229,10 +229,11 @@ class RolePermissionManagementTest extends TestCase
             'rol_id' => $roleId,
             'permission_id' => $affiliationsPermissionId,
         ]);
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->get(route('programs.affiliations.index'))
             ->assertOk()
             ->assertSee('afiliaciones-recientes');
+        $this->assertSame(1, substr_count($response->getContent(), '>Pacientes inscritos</span>'));
     }
 
     public function test_dashboard_sections_and_receipts_follow_granted_permissions(): void
