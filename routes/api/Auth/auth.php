@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Dashboard\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->prefix('v1')->group(function () {
@@ -15,6 +14,5 @@ Route::middleware('web')->prefix('v1')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/user', [AuthController::class, 'user'])->name('api.user');
         Route::post('/logout', [AuthController::class, 'destroy'])->name('api.logout');
-        Route::get('/dashboard', DashboardController::class)->name('api.dashboard');
     });
 });

@@ -101,6 +101,23 @@ class MigrationsCompatibilityTest extends TestCase
         $this->assertTrue(Schema::hasTable('jobs'));
     }
 
+    public function test_permission_migration_repairs_a_pivot_table_left_without_foreign_keys(): void
+    {
+        Schema::drop('permission_role');
+        Schema::create('permission_role', function (Blueprint $table): void {
+            $table->bigInteger('rol_id');
+            $table->unsignedBigInteger('permission_id');
+            $table->primary(['rol_id', 'permission_id']);
+        });
+
+        $migration = require database_path('migrations/2026_11_29_000001_rename_professionals_and_link_users.php');
+        $migration->up();
+
+        $foreignKeys = DB::select("PRAGMA foreign_key_list('permission_role')");
+        $this->assertCount(2, $foreignKeys);
+        $this->assertEqualsCanonicalizing(['roles', 'permissions'], array_column($foreignKeys, 'table'));
+    }
+
     public function test_legacy_staff_records_survive_the_table_rename(): void
     {
         $connectionName = 'staff_rename_test';

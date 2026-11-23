@@ -88,12 +88,40 @@ return new class extends Migration
 
         if (! Schema::hasTable('permission_role')) {
             Schema::create('permission_role', function (Blueprint $table): void {
-                $table->unsignedBigInteger('rol_id');
+                $table->bigInteger('rol_id');
                 $table->unsignedBigInteger('permission_id');
                 $table->primary(['rol_id', 'permission_id']);
                 $table->foreign('rol_id')->references('rol_id')->on('roles')->cascadeOnDelete();
                 $table->foreign('permission_id')->references('permission_id')->on('permissions')->cascadeOnDelete();
             });
+        }
+
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)
+            && Schema::hasTable('permission_role')
+            && ! Schema::hasForeignKey('permission_role', 'permission_role_rol_id_foreign')) {
+            $roleIdType = DB::selectOne(
+                'SELECT COLUMN_TYPE FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?',
+                ['permission_role', 'rol_id']
+            )?->COLUMN_TYPE;
+
+            if (is_string($roleIdType) && str_contains(strtolower($roleIdType), 'unsigned')) {
+                DB::statement('ALTER TABLE `permission_role` MODIFY `rol_id` BIGINT NOT NULL');
+            }
+        }
+
+        if (! Schema::hasForeignKey('permission_role', 'permission_role_rol_id_foreign')) {
+            Schema::table('permission_role', fn (Blueprint $table) => $table
+                ->foreign('rol_id')
+                ->references('rol_id')
+                ->on('roles')
+                ->cascadeOnDelete());
+        }
+        if (! Schema::hasForeignKey('permission_role', 'permission_role_permission_id_foreign')) {
+            Schema::table('permission_role', fn (Blueprint $table) => $table
+                ->foreign('permission_id')
+                ->references('permission_id')
+                ->on('permissions')
+                ->cascadeOnDelete());
         }
 
         $submoduleReadPermissions = [
