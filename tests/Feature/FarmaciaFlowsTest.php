@@ -3551,8 +3551,16 @@ class FarmaciaFlowsTest extends TestCase
             ->assertOk()
             ->assertSee('Aprobar solicitud')
             ->assertSee('Rechazar solicitud')
+            ->assertSee('data-open-adjustment-confirmation="APROBAR"', false)
+            ->assertSee('data-open-adjustment-confirmation="RECHAZAR"', false)
+            ->assertSee('data-adjustment-confirmation', false)
+            ->assertSee('data-adjustment-confirm-button', false)
+            ->assertSee('Cerrar ventana')
+            ->assertSee('Medicamentos')
+            ->assertSee('Diferencia de inventario línea 1')
             ->assertSee('Motivo del rechazo')
-            ->assertSee('required', false);
+            ->assertSee('data-adjustment-rejection-reason hidden', false)
+            ->assertDontSee('name="motivo_resolucion" rows="3" maxlength="1000" required', false);
         $this->actingAs(Usuario::where('rut', $pharmacistRut)->firstOrFail())
             ->patch(route('inventory.adjustments.resolve', $requestIds[0]), ['decision' => 'APROBAR'])
             ->assertRedirect(route('inventory.adjustments.index'));
@@ -3568,6 +3576,14 @@ class FarmaciaFlowsTest extends TestCase
             ->whereIn('referencia_id', $requestIds)
             ->where('referencia_tipo', 'SOLICITUD_AJUSTE')
             ->count());
+        $this->assertSame($initialStock[0] + 2, (float) DB::table('inventario')
+            ->where('lote_id', $inventories[0]->lote_id)
+            ->where('ubicacion_id', $inventories[0]->ubicacion_id)
+            ->value('cantidad'));
+        $this->assertSame($initialStock[1] - 1, (float) DB::table('inventario')
+            ->where('lote_id', $inventories[1]->lote_id)
+            ->where('ubicacion_id', $inventories[1]->ubicacion_id)
+            ->value('cantidad'));
 
         $this->actingAs(Usuario::where('rut', '12345674')->firstOrFail());
         $movementCount = DB::table('movimientos_inventario')->count();
@@ -3602,6 +3618,11 @@ class FarmaciaFlowsTest extends TestCase
             ->patch(route('inventory.adjustments.resolve', $secondRequestId), ['decision' => 'RECHAZAR'])
             ->assertRedirect(route('inventory.adjustments.show', $secondGroupId))
             ->assertSessionHasErrors('motivo_resolucion');
+        $this->get(route('inventory.adjustments.show', $secondGroupId))
+            ->assertOk()
+            ->assertSee('data-open-on-load="true"', false)
+            ->assertSee('data-initial-decision="RECHAZAR"', false)
+            ->assertSee('name="motivo_resolucion"', false);
         $this->patch(route('inventory.adjustments.resolve', $secondRequestId), [
             'decision' => 'RECHAZAR',
             'motivo_resolucion' => 'Revisión física requerida',

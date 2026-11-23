@@ -71,6 +71,10 @@
     .delivery-order-dialog-actions,
     .delivery-order-dialog-actions form,
     .delivery-order-dialog-footer .btn { width: 100%; }
+    .adjustment-resolution-actions { flex-direction: column; }
+    .adjustment-resolution-actions .btn { width: 100%; }
+    .inventory-adjustment-confirmation .delivery-order-dialog-footer { flex-direction: column-reverse; padding: 12px; }
+    .inventory-adjustment-confirmation .delivery-order-dialog-footer .btn { width: 100%; }
     .detail-row:not(.prescription-detail-row):not(.supply-detail-row) {
         grid-template-columns: repeat(2,minmax(0,1fr));
     }

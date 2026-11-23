@@ -83,23 +83,97 @@
                 @if ($canResolveAdjustment && $adjustmentDetails->isNotEmpty())
                     <div class="notice notice-info">
                         <i class="fa-solid fa-circle-info"></i>
-                        <span>La decisión se aplicará a todas las líneas de esta solicitud. Aprobar actualizará las existencias; rechazar requiere indicar el motivo.</span>
+                        <span>La decisión se aplicará a todas las líneas de esta solicitud. Revisa los medicamentos y cantidades antes de confirmar.</span>
                     </div>
-                    <form action="{{ route('inventory.adjustments.resolve', $adjustmentDetails->first()->solicitud_ajuste_id) }}" method="post" class="inline-form">
-                        @csrf @method('PATCH')
-                        <input type="hidden" name="decision" value="APROBAR">
-                        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check"></i> Aprobar solicitud</button>
-                    </form>
-                    <form action="{{ route('inventory.adjustments.resolve', $adjustmentDetails->first()->solicitud_ajuste_id) }}" method="post" class="stack-form">
-                        @csrf @method('PATCH')
-                        <input type="hidden" name="decision" value="RECHAZAR">
-                        <label for="motivo_resolucion">Motivo del rechazo <span class="required-mark">*</span></label>
-                        <textarea id="motivo_resolucion" class="form-control" name="motivo_resolucion" rows="3" maxlength="1000" required>{{ old('motivo_resolucion') }}</textarea>
-                        @error('motivo_resolucion')<span class="field-error">{{ $message }}</span>@enderror
-                        <div class="form-actions">
-                            <button class="btn btn-outline" type="submit"><i class="fa-solid fa-xmark"></i> Rechazar solicitud</button>
-                        </div>
-                    </form>
+                    <div class="adjustment-resolution-actions">
+                        <button class="btn btn-primary" type="button" data-open-adjustment-confirmation="APROBAR">
+                            <i class="fa-solid fa-check"></i> Aprobar solicitud
+                        </button>
+                        <button class="btn btn-outline" type="button" data-open-adjustment-confirmation="RECHAZAR">
+                            <i class="fa-solid fa-xmark"></i> Rechazar solicitud
+                        </button>
+                    </div>
+
+                    <dialog
+                        class="delivery-order-dialog inventory-adjustment-confirmation"
+                        data-adjustment-confirmation
+                        data-open-on-load="{{ $errors->any() ? 'true' : 'false' }}"
+                        data-initial-decision="{{ old('decision', 'APROBAR') }}"
+                        aria-labelledby="adjustment-confirmation-title"
+                    >
+                        <header class="delivery-order-dialog-header">
+                            <span class="delivery-order-dialog-icon" aria-hidden="true"><img src="{{ asset('logo.jpg') }}" alt=""></span>
+                            <div>
+                                <h2 id="adjustment-confirmation-title" data-adjustment-confirmation-title>Confirmar solicitud</h2>
+                                <p>Revisión de medicamentos y cantidades antes de resolver</p>
+                            </div>
+                            <button class="delivery-order-dialog-close" type="button" data-close-adjustment-confirmation aria-label="Cerrar ventana">
+                                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                            </button>
+                        </header>
+                        <form
+                            action="{{ route('inventory.adjustments.resolve', $adjustmentDetails->first()->solicitud_ajuste_id) }}"
+                            method="post"
+                            class="inventory-adjustment-confirmation-form"
+                            data-adjustment-resolution-form
+                        >
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="decision" value="{{ old('decision', 'APROBAR') }}" data-adjustment-decision>
+                            <div class="delivery-order-dialog-body">
+                                <div class="notice notice-info">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                    <span data-adjustment-confirmation-message>Al confirmar, se aprobarán todas las líneas de esta solicitud y se actualizarán las existencias.</span>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="delivery-order-items">
+                                        <thead>
+                                            <tr>
+                                                <th>MEDICAMENTO</th>
+                                                <th>LOTE</th>
+                                                <th>CANTIDAD</th>
+                                                <th>UBICACIÓN</th>
+                                                <th>TIPO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($adjustmentDetails as $detail)
+                                                <tr>
+                                                    <td><strong>{{ $detail->producto }}</strong></td>
+                                                    <td>{{ $detail->numero_lote }}<small>Vence {{ \Illuminate\Support\Carbon::parse($detail->fecha_vencimiento)->format('d/m/Y') }}</small></td>
+                                                    <td><strong>{{ \App\Support\Formatting\NumberFormat::format($detail->cantidad) }}</strong></td>
+                                                    <td>{{ $detail->ubicacion }}</td>
+                                                    <td>{{ $detail->tipo_ajuste === 'ENTRADA' ? 'Entrada' : 'Salida' }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="form-group adjustment-rejection-reason" data-adjustment-rejection-reason hidden>
+                                    <label for="motivo_resolucion">Motivo del rechazo <span class="required-mark">*</span></label>
+                                    <textarea
+                                        id="motivo_resolucion"
+                                        class="form-control"
+                                        name="motivo_resolucion"
+                                        rows="3"
+                                        maxlength="1000"
+                                        data-adjustment-rejection-input
+                                        disabled
+                                    >{{ old('motivo_resolucion') }}</textarea>
+                                </div>
+                                @if ($errors->any())
+                                    <div class="notice notice-warning" role="alert">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        <span>@foreach ($errors->all() as $error){{ $error }}@if (!$loop->last) <br>@endif @endforeach</span>
+                                    </div>
+                                @endif
+                            </div>
+                            <footer class="delivery-order-dialog-footer inventory-adjustment-confirmation-footer">
+                                <button class="btn btn-outline" type="button" data-close-adjustment-confirmation>Cerrar ventana</button>
+                                <button class="btn btn-primary" type="submit" data-adjustment-confirm-button>Confirmar solicitud</button>
+                            </footer>
+                        </form>
+                    </dialog>
                 @elseif ($selfAuthorizationBlocked)
                     <div class="notice notice-warning">
                         <i class="fa-solid fa-user-shield"></i>

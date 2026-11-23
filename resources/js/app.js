@@ -19,10 +19,12 @@ import { initializeChileanMobileInputs } from './modules/phone-input';
 import { initializeDateInputs } from './modules/date-inputs';
 import { initializeLiveRecordSearch } from './modules/live-record-search';
 import { initializePermissionEditor } from './modules/permission-editor';
+import { initializeInventoryAdjustmentConfirmation } from './modules/inventory-adjustment-confirmation';
 
 initializeDateInputs();
 initializeLiveRecordSearch();
 initializePermissionEditor();
+initializeInventoryAdjustmentConfirmation();
 initializeModuleSections();
 initializeRutValidation();
 initializePersonLookup();
